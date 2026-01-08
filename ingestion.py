@@ -1,4 +1,12 @@
 import streamlit as st
+import pandas as pd
+import os
+import sys
+
+# Add analytics engine to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'analytics_engine'))
+from geospatial_processor import GeospatialProcessor
+from manual_viability_processor import ManualViabilityProcessor
 
 def show():
     # Header
@@ -100,7 +108,7 @@ def show():
                 <div class="card-sub">Drag & drop your CSV file here, or click to browse files</div>
             </div>
             """, unsafe_allow_html=True)
-            st.file_uploader("Upload Returns", label_visibility="collapsed", key="u1")
+            returns_file = st.file_uploader("Upload Returns", label_visibility="collapsed", key="u1", type=["xlsx", "csv"])
 
     with c2:
         with st.container():
@@ -112,7 +120,7 @@ def show():
                 <div class="card-sub">Drag & drop your CSV file here, or click to browse files</div>
             </div>
             """, unsafe_allow_html=True)
-            st.file_uploader("Upload Sales", label_visibility="collapsed", key="u2")
+            sales_file = st.file_uploader("Upload Sales", label_visibility="collapsed", key="u2", type=["xlsx", "csv"])
 
 
     # Centered 'Run' Button
@@ -133,7 +141,58 @@ def show():
         </style>
         """, unsafe_allow_html=True)
         if st.button("✨ Run Preprocessing & Predict"):
-            st.toast("Pipeline Started!")
+            if returns_file is None and sales_file is None:
+                st.error("Please upload at least one file (Returns or Sales)")
+                return
+
+            # Initialize geospatial processor
+            processor = GeospatialProcessor()
+
+            # Save uploaded files temporarily
+            returns_path = None
+            sales_path = None
+
+            if returns_file is not None:
+                returns_path = os.path.join("temp_returns.xlsx")
+                with open(returns_path, "wb") as f:
+                    f.write(returns_file.getbuffer())
+
+            if sales_file is not None:
+                sales_path = os.path.join("temp_sales.xlsx")
+                with open(sales_path, "wb") as f:
+                    f.write(sales_file.getbuffer())
+
+            # Process data
+            if processor.load_and_process_data(returns_path, sales_path):
+                # Store geospatial results in session state
+                st.session_state.geospatial_data = processor.processed_data
+
+                # Train manual viability processor if sales data is available
+                if sales_path:
+                    viability_processor = ManualViabilityProcessor()
+                    if viability_processor.load_and_train_models(pd.read_excel(sales_path) if sales_path.endswith('.xlsx') else pd.read_csv(sales_path)):
+                        st.session_state.manual_viability_processor = viability_processor
+                        st.session_state.viability_trained = True
+
+                st.session_state.data_processed = True
+
+                success_msg = "✅ Data processing complete! "
+                if sales_path:
+                    success_msg += "Geospatial analysis and manual viability check models are now available."
+                else:
+                    success_msg += "Geospatial analysis results are now available in the Geospatial Demand Analysis page."
+
+                st.success(success_msg)
+
+                # Clean up temporary files
+                if returns_path and os.path.exists(returns_path):
+                    os.remove(returns_path)
+                if sales_path and os.path.exists(sales_path):
+                    os.remove(sales_path)
+
+                st.toast("Pipeline Completed Successfully!")
+            else:
+                st.error("Failed to process data. Please check file formats and column names.")
 
     # Footer Info
     st.markdown("""
