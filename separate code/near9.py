@@ -6,6 +6,22 @@ from math import radians, cos, sin, asin, sqrt
 from sklearn.neighbors import NearestNeighbors
 from prophet import Prophet
 
+# Load environment variables from .env file
+def load_env_file():
+    """Manually load .env file if python-dotenv is not available"""
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+    if os.path.exists(env_path):
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        os.environ[key.strip()] = value.strip()
+
+# Load .env file
+load_env_file()
+
 # =================================================
 # 🔍 AUTO FIND UPDATED EXCEL FILES
 # =================================================
@@ -49,7 +65,8 @@ sales_df["season"] = sales_df["month"].apply(get_season)
 # =================================================
 # 🌍 SAFE LIVE WEATHER API
 # =================================================
-OPENWEATHER_API_KEY = "API"
+# Load API key from .env file
+OPENWEATHER_API_KEY = os.getenv("API_kay", "API")  # Fallback to "API" if not found
 CITY_FOR_WEATHER = "Ahmedabad"
 
 def map_weather(main, wind):
