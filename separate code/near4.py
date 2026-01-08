@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from math import radians, cos, sin, asin, sqrt
 import os
+from collections import defaultdict
 
 def find_excel(target_name):
     for root, dirs, files in os.walk("D:\\"):
@@ -45,6 +46,9 @@ if "qty" not in sales_df.columns:
 returns_df = returns_df.dropna(subset=["product_name", "lat", "lon"])
 sales_df   = sales_df.dropna(subset=["product_name", "lat", "lon", "platform"])
 
+# ✅ REGIONAL SUMMARY STORAGE
+regional_summary = defaultdict(lambda: {"returns": 0, "sales": 0})
+
 for _, ret in returns_df.iterrows():
 
     order_id = ret.get("order_id", "NA")
@@ -64,6 +68,7 @@ for _, ret in returns_df.iterrows():
         print("SELL NEAR ME   : NO")
         print("SELL CONFIDENCE: 0 %")
         print("Reason         : No instant-delivery sales history")
+        regional_summary[city]["returns"] += 1
         print("-" * 45)
         continue
 
@@ -78,6 +83,7 @@ for _, ret in returns_df.iterrows():
         print("SELL NEAR ME   : NO")
         print("SELL CONFIDENCE: 0 %")
         print("Reason         : No nearby demand within radius")
+        regional_summary[city]["returns"] += 1
         print("-" * 45)
         continue
 
@@ -87,6 +93,7 @@ for _, ret in returns_df.iterrows():
         print("SELL NEAR ME   : NO")
         print("SELL CONFIDENCE: 0 %")
         print("Reason         : Insufficient demand volume")
+        regional_summary[city]["returns"] += 1
         print("-" * 45)
         continue
 
@@ -108,22 +115,14 @@ for _, ret in returns_df.iterrows():
 
     if sell_confidence < MAYBE_THRESHOLD:
         decision = "NO"
-        reason = "Low confidence after demand & distance evaluation"
-        sell_lat = sell_lon = None
-
-    elif sell_confidence < YES_THRESHOLD:
-        decision = "MAYBE"
-        best_row = nearby_sales.sort_values("distance_km").iloc[0]
-        sell_lat = best_row["lat"]
-        sell_lon = best_row["lon"]
-        reason = "Moderate demand near return location"
+        regional_summary[city]["returns"] += 1
 
     else:
-        decision = "YES"
+        decision = "YES" if sell_confidence >= YES_THRESHOLD else "MAYBE"
+        regional_summary[city]["sales"] += 1
         best_row = nearby_sales.sort_values("distance_km").iloc[0]
         sell_lat = best_row["lat"]
         sell_lon = best_row["lon"]
-        reason = "Strong nearby demand with platform dominance"
 
     print(f"SELL NEAR ME   : {decision}")
     print(f"SELL CONFIDENCE: {sell_confidence} %")
@@ -131,10 +130,19 @@ for _, ret in returns_df.iterrows():
     if decision != "NO":
         print(f"BEST APP       : {best_app}")
         print(f"SELL Lat/Lon   : {sell_lat}, {sell_lon}")
-    else:
-        print(f"Reason         : {reason}")
 
     print("-" * 45)
 
+# =====================================================
+# 📊 REGIONAL SALES VS RETURNS SUMMARY
+# =====================================================
+print("\n📍 Regional Sales vs Returns:\n")
+
+for city, data in regional_summary.items():
+    print(
+        f"{city:<12} : "
+        f"Returns = {data['returns']:<3} | "
+        f"Sales = {data['sales']:<3}"
+    )
 
 #Geospatial Demand Analysis
