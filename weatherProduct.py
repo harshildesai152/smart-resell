@@ -4,6 +4,13 @@ import pandas as pd
 import generateLabel
 
 def show():
+    # Check if data has been processed
+    if not st.session_state.get('weather_processed', False):
+        st.warning("⚠️ Please upload both returns and sales data first using the 'Ingest Data' page to see weather-product analysis.")
+        st.info("Go to 'Ingest Data' → Upload your returns and sales data → Click 'Run Preprocessing & Predict'")
+        return
+
+    weather_data = st.session_state.get('weather_data', {})
     # Header
     col1, col2 = st.columns([6, 1])
     with col1:
@@ -28,24 +35,35 @@ def show():
         with c1:
             st.markdown("#### Top Products by Weather")
         with c2:
-            st.selectbox("Select Condition:", ["Sunny", "Rainy", "Cloudy", "Windy"], key="wp_condition", label_visibility="collapsed")
+            # Get available weather conditions from processed data
+            page1_tables = weather_data.get('page1_tables', {})
+            available_weathers = list(page1_tables.keys()) if page1_tables else ["Sunny", "Rainy", "Cloudy", "Windy"]
+
+            selected_weather = st.selectbox("Select Condition:", available_weathers, key="wp_condition", label_visibility="collapsed")
             
         # 1. Horizontal Bar Chart (Best Selling Categories)
-        
+
         st.markdown(f'<div style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 20px;">', unsafe_allow_html=True)
-        st.markdown('<div style="color: #c9d1d9; font-size: 13px; margin-bottom: 10px;">Best Selling Categories during <span style="color: #651FFF; font-weight: bold;">Sunny</span> weather</div>', unsafe_allow_html=True)
-        
+        st.markdown(f'<div style="color: #c9d1d9; font-size: 13px; margin-bottom: 10px;">Best Selling Categories during <span style="color: #651FFF; font-weight: bold;">{selected_weather}</span> weather</div>', unsafe_allow_html=True)
+
         fig = go.Figure()
-        
-        categories = ['Grocery', 'Home', 'Fashion', 'Beauty', 'Electronics']
-        values = [4, 5, 6, 7, 10]
-        
+
+        # Get category performance data for selected weather
+        weather_table = page1_tables.get(selected_weather)
+        if weather_table is not None and not weather_table.empty:
+            categories = weather_table['category'].tolist()
+            values = weather_table['sales_count'].tolist()
+        else:
+            # Fallback static data
+            categories = ['Grocery', 'Home', 'Fashion', 'Beauty', 'Electronics']
+            values = [4, 5, 6, 7, 10]
+
         fig.add_trace(go.Bar(
             y=categories,
             x=values,
             orientation='h',
             marker_color='#536DFE',
-            hovertemplate="<b>%{y}</b><br>value : %{x}<extra></extra>"
+            hovertemplate="<b>%{y}</b><br>Sales Count: %{x}<extra></extra>"
         ))
         
         fig.update_layout(
@@ -65,8 +83,8 @@ def show():
         st.markdown("<br>", unsafe_allow_html=True)
         
         # 2. Category Performance Table
-        
-        st.markdown("##### Category Performance: Sunny")
+
+        st.markdown(f"##### Category Performance: {selected_weather}")
         
         st.markdown("""
         <style>
@@ -103,11 +121,23 @@ def show():
             
             st.markdown("<div style='border-bottom: 1px solid #21262d; opacity: 0.5;'></div>", unsafe_allow_html=True)
 
-        render_product_row("Electronics", 10, 7.8, "High Priority", "btn_elec")
-        render_product_row("Beauty", 7, 2.3, "High Priority", "btn_beauty")
-        render_product_row("Fashion", 6, 1.5, "High Priority", "btn_fash")
-        render_product_row("Home", 5, 16.3, "High Priority", "btn_home")
-        render_product_row("Grocery", 4, 1.5, "High Priority", "btn_groc")
+        # Display real category performance data for selected weather
+        if weather_table is not None and not weather_table.empty:
+            for idx, row in weather_table.iterrows():
+                cat = row['category']
+                count = int(row['sales_count'])
+                trend = abs(float(row['trend_vs_avg']))  # Show absolute value for display
+                stock = row['recommended_stock']
+                key_id = f"btn_{cat.lower()}_{idx}"
+
+                render_product_row(cat, count, trend, stock, key_id)
+        else:
+            # Fallback static data
+            render_product_row("Electronics", 10, 7.8, "High Priority", "btn_elec")
+            render_product_row("Beauty", 7, 2.3, "High Priority", "btn_beauty")
+            render_product_row("Fashion", 6, 1.5, "High Priority", "btn_fash")
+            render_product_row("Home", 5, 16.3, "High Priority", "btn_home")
+            render_product_row("Grocery", 4, 1.5, "High Priority", "btn_groc")
         
         
     # Sidebar

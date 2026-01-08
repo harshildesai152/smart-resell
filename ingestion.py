@@ -7,6 +7,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'analytics_engine'))
 from geospatial_processor import GeospatialProcessor
 from manual_viability_processor import ManualViabilityProcessor
+from weather_processor import WeatherProcessor
 
 def show():
     # Header
@@ -167,6 +168,13 @@ def show():
                 # Store geospatial results in session state
                 st.session_state.geospatial_data = processor.processed_data
 
+                # Process weather analysis if both files are available
+                if returns_path and sales_path:
+                    weather_processor = WeatherProcessor()
+                    if weather_processor.load_and_process_data(returns_path, sales_path):
+                        st.session_state.weather_data = weather_processor.processed_data
+                        st.session_state.weather_processed = True
+
                 # Train manual viability processor if sales data is available
                 if sales_path:
                     viability_processor = ManualViabilityProcessor()
@@ -177,8 +185,16 @@ def show():
                 st.session_state.data_processed = True
 
                 success_msg = "✅ Data processing complete! "
-                if sales_path:
-                    success_msg += "Geospatial analysis and manual viability check models are now available."
+                features = []
+                if True:  # geospatial always processed
+                    features.append("Geospatial analysis")
+                if sales_path and st.session_state.get('viability_trained', False):
+                    features.append("manual viability check models")
+                if returns_path and sales_path and st.session_state.get('weather_processed', False):
+                    features.append("weather trends analysis")
+
+                if features:
+                    success_msg += f"{' and '.join(features)} are now available."
                 else:
                     success_msg += "Geospatial analysis results are now available in the Geospatial Demand Analysis page."
 
