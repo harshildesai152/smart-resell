@@ -49,7 +49,7 @@ sales_df["season"] = sales_df["month"].apply(get_season)
 # =================================================
 # 🌍 SAFE LIVE WEATHER API
 # =================================================
-OPENWEATHER_API_KEY = "7511e0928bb24e755e46f975c2e487a7"
+OPENWEATHER_API_KEY = "API"
 CITY_FOR_WEATHER = "Ahmedabad"
 
 def map_weather(main, wind):
