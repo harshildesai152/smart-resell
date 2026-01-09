@@ -13,6 +13,7 @@ from channel_processor import ChannelProcessor
 from smart_forecast_processor import SmartForecastProcessor
 from segmentation_processor import SegmentationProcessor
 from product_lifecycle_processor import ProductLifecycleProcessor
+from price_sensitivity_processor import PriceSensitivityProcessor
 
 def show():
     # Header
@@ -215,6 +216,13 @@ def show():
                         st.session_state.lifecycle_data = lifecycle_processor.processed_data
                         st.session_state.lifecycle_processed = True
 
+                # Process price sensitivity if sales file is available
+                if sales_path:
+                    sensitivity_processor = PriceSensitivityProcessor()
+                    if sensitivity_processor.load_and_process_data(None, sales_path):
+                        st.session_state.sensitivity_data = sensitivity_processor.processed_data
+                        st.session_state.sensitivity_processed = True
+
                 # Train manual viability processor if sales data is available
                 if sales_path:
                     viability_processor = ManualViabilityProcessor()
@@ -242,6 +250,8 @@ def show():
                     features.append("customer & location segmentation")
                 if sales_path and st.session_state.get('lifecycle_processed', False):
                     features.append("product lifecycle analysis")
+                if sales_path and st.session_state.get('sensitivity_processed', False):
+                    features.append("price sensitivity analysis")
 
                 if features:
                     success_msg += f"{' and '.join(features)} are now available."
