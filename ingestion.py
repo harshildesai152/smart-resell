@@ -9,6 +9,7 @@ from geospatial_processor import GeospatialProcessor
 from manual_viability_processor import ManualViabilityProcessor
 from weather_processor import WeatherProcessor
 from demand_processor import DemandProcessor
+from channel_processor import ChannelProcessor
 
 def show():
     # Header
@@ -183,6 +184,13 @@ def show():
                         st.session_state.demand_data = demand_processor.processed_data
                         st.session_state.demand_processed = True
 
+                # Process channel analysis if both files are available
+                if returns_path and sales_path:
+                    channel_processor = ChannelProcessor()
+                    if channel_processor.load_and_process_data(returns_path, sales_path):
+                        st.session_state.channel_data = channel_processor.processed_data
+                        st.session_state.channel_processed = True
+
                 # Train manual viability processor if sales data is available
                 if sales_path:
                     viability_processor = ManualViabilityProcessor()
@@ -202,6 +210,8 @@ def show():
                     features.append("weather trends analysis")
                 if returns_path and sales_path and st.session_state.get('demand_processed', False):
                     features.append("demand matching analysis")
+                if returns_path and sales_path and st.session_state.get('channel_processed', False):
+                    features.append("channel performance analysis")
 
                 if features:
                     success_msg += f"{' and '.join(features)} are now available."
