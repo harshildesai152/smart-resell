@@ -12,6 +12,7 @@ from demand_processor import DemandProcessor
 from channel_processor import ChannelProcessor
 from smart_forecast_processor import SmartForecastProcessor
 from segmentation_processor import SegmentationProcessor
+from product_lifecycle_processor import ProductLifecycleProcessor
 
 def show():
     # Header
@@ -207,6 +208,13 @@ def show():
                         st.session_state.segmentation_data = segmentation_processor.processed_data
                         st.session_state.segmentation_processed = True
 
+                # Process product lifecycle if sales file is available
+                if sales_path:
+                    lifecycle_processor = ProductLifecycleProcessor()
+                    if lifecycle_processor.load_and_process_data(None, sales_path):
+                        st.session_state.lifecycle_data = lifecycle_processor.processed_data
+                        st.session_state.lifecycle_processed = True
+
                 # Train manual viability processor if sales data is available
                 if sales_path:
                     viability_processor = ManualViabilityProcessor()
@@ -232,6 +240,8 @@ def show():
                     features.append("smart forecast analysis")
                 if returns_path and sales_path and st.session_state.get('segmentation_processed', False):
                     features.append("customer & location segmentation")
+                if sales_path and st.session_state.get('lifecycle_processed', False):
+                    features.append("product lifecycle analysis")
 
                 if features:
                     success_msg += f"{' and '.join(features)} are now available."
