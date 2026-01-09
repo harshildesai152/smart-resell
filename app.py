@@ -62,55 +62,55 @@ with st.sidebar:
     st.markdown("## ⬢ Sell Best")
     st.markdown("AI Inventory Intelligence")
     st.markdown("---")
-    
-    st.caption("MAIN")
-    # Using radio for list-like navigation as requested
-    selected_page = st.radio("Navigation", ["Dashboard", "Manual Check", "Ingest Data"], index=0, label_visibility="collapsed")
-    
-    selected_module = "Overview" # Default
-    
-    if selected_page == "Dashboard":
-        st.markdown(" ")
-        st.caption("ANALYTICS MODULES")
-        analytics_options = [
-            "Overview", "Geo & Demand", "Weather Trends", "Weather x Product",
-            "Demand Matching", "Channel Analysis", "Smart Forecast",
-            "Customer & Location Segmentation", "Product Lifecycle Analysis", "Price Sensitivity & Discount Simulator"
-        ]
-        selected_module = st.radio("Modules", analytics_options, label_visibility="collapsed")
+
+    # All navigation options in a single flat list
+    all_options = [
+        "Dashboard",
+        "Manual Check",
+        "Ingest Data",
+        "Geo & Demand",
+        "Weather Trends",
+        "Weather x Product",
+        "Demand Matching",
+        "Channel Analysis",
+        "Smart Forecast",
+        "Customer & Location Segmentation",
+        "Product Lifecycle Analysis",
+        "Price Sensitivity & Discount Simulator"
+    ]
+
+    selected_option = st.radio("Navigation", all_options, index=0, label_visibility="collapsed")
 
     st.markdown("---")
     st.markdown("Device: **Active**")
     st.caption("Admin User")
 
 # Routing Logic
-if selected_page == "Dashboard":
-    if selected_module == "Overview":
-        dashboard.show()
-    elif selected_module == "Geo & Demand":
-        geospatial.show()
-    elif selected_module == "Weather Trends":
-        weather.show()
-    elif selected_module == "Weather x Product":
-        weatherProduct.show()
-    elif selected_module == "Demand Matching":
-        demand.show()
-    elif selected_module == "Channel Analysis":
-        ChannelAn.show()
-    elif selected_module == "Smart Forecast":
-        smartForecast.show()
-   
-    elif selected_module == "Customer & Location Segmentation":
-        segmentation.show()
-    elif selected_module == "Product Lifecycle Analysis":
-        productLifecycle.show()
-    elif selected_module == "Price Sensitivity & Discount Simulator":
-        priceSensitivity.show()
-    else:
-        st.info("Module under development")
-elif selected_page == "Manual Check":
+if selected_option == "Dashboard":
+    dashboard.show()
+elif selected_option == "Manual Check":
     manual.show()
-elif selected_page == "Ingest Data":
+elif selected_option == "Ingest Data":
     ingestion.show()
+elif selected_option == "Geo & Demand":
+    geospatial.show()
+elif selected_option == "Weather Trends":
+    weather.show()
+elif selected_option == "Weather x Product":
+    weatherProduct.show()
+elif selected_option == "Demand Matching":
+    demand.show()
+elif selected_option == "Channel Analysis":
+    ChannelAn.show()
+elif selected_option == "Smart Forecast":
+    smartForecast.show()
+elif selected_option == "Customer & Location Segmentation":
+    segmentation.show()
+elif selected_option == "Product Lifecycle Analysis":
+    productLifecycle.show()
+elif selected_option == "Price Sensitivity & Discount Simulator":
+    priceSensitivity.show()
+else:
+    st.info("Module under development")
 
 
