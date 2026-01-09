@@ -11,6 +11,7 @@ from weather_processor import WeatherProcessor
 from demand_processor import DemandProcessor
 from channel_processor import ChannelProcessor
 from smart_forecast_processor import SmartForecastProcessor
+from segmentation_processor import SegmentationProcessor
 
 def show():
     # Header
@@ -199,6 +200,13 @@ def show():
                         st.session_state.forecast_data = forecast_processor.processed_data
                         st.session_state.forecast_processed = True
 
+                # Process segmentation if both files are available
+                if returns_path and sales_path:
+                    segmentation_processor = SegmentationProcessor()
+                    if segmentation_processor.load_and_process_data(returns_path, sales_path):
+                        st.session_state.segmentation_data = segmentation_processor.processed_data
+                        st.session_state.segmentation_processed = True
+
                 # Train manual viability processor if sales data is available
                 if sales_path:
                     viability_processor = ManualViabilityProcessor()
@@ -222,6 +230,8 @@ def show():
                     features.append("channel performance analysis")
                 if returns_path and sales_path and st.session_state.get('forecast_processed', False):
                     features.append("smart forecast analysis")
+                if returns_path and sales_path and st.session_state.get('segmentation_processed', False):
+                    features.append("customer & location segmentation")
 
                 if features:
                     success_msg += f"{' and '.join(features)} are now available."
