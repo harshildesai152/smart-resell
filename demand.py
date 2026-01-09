@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 
 def show():
+    # Check if data has been processed
+    if not st.session_state.get('demand_processed', False):
+        st.warning("⚠️ Please upload both returns and sales data first using the 'Ingest Data' page to see demand matching analysis.")
+        st.info("Go to 'Ingest Data' → Upload your returns and sales data → Click 'Run Preprocessing & Predict'")
+        return
+
+    demand_data = st.session_state.get('demand_data', {})
     # Header
     col1, col2 = st.columns([6, 1])
     with col1:
@@ -21,44 +28,40 @@ def show():
 </div>
 """, unsafe_allow_html=True)
         
-        # Item Selection Logic (using session state to track active item)
-        if "demand_selected_item" not in st.session_state:
-            st.session_state.demand_selected_item = 0 # Default first item
-            
-        items = [
-            {"id": 0, "name": "Product 1 - Fashion", "cat": "Beauty", "loc": "Delhi", "tag": "Open Box", "tag_color": "#fb8c00"},
-            {"id": 1, "name": "Product 2 - Grocery", "cat": "Fashion", "loc": "Hyderabad", "tag": "New", "tag_color": "#00E676"},
-            {"id": 2, "name": "Product 3 - Electronics", "cat": "Fashion", "loc": "Chennai", "tag": "New", "tag_color": "#00E676"},
-            {"id": 3, "name": "Product 4 - Home", "cat": "Fashion", "loc": "Gurgaon", "tag": "Open Box", "tag_color": "#fb8c00"},
-            {"id": 4, "name": "Product 5 - Fashion", "cat": "Grocery", "loc": "Chennai", "tag": "New", "tag_color": "#00E676"},
-            {"id": 5, "name": "Product 6 - Grocery", "cat": "Electronics", "loc": "Hyderabad", "tag": "New", "tag_color": "#00E676"},
-            {"id": 6, "name": "Product 7 - Fashion", "cat": "Home", "loc": "Delhi", "tag": "New", "tag_color": "#00E676"},
-            {"id": 7, "name": "Product 8 - Electronics", "cat": "Home", "loc": "Chennai", "tag": "Open Box", "tag_color": "#fb8c00"},
-        ]
-        
-        for item in items:
-            is_active = (st.session_state.demand_selected_item == item["id"])
-            border_style = "1px solid #7C4DFF" if is_active else "1px solid #30363d"
-            bg_style = "rgba(124, 77, 255, 0.1)" if is_active else "#161b22"
-            
-            # Button behavior wrapper
-            # Visual cleanup: hiding the explicit buttons to match clear design request
-            # We assume "Product 1" is selected for this static demo based on image
-            
-            # CSS for the items
-            st.markdown(f"""
-<div style="background-color: {bg_style}; border: {border_style}; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; position: relative;">
+        # Get real recent returns data
+        recent_returns = demand_data.get('recent_returns')
+        demand_matching_results = demand_data.get('demand_matching_results', [])
+
+        if recent_returns is not None and not recent_returns.empty:
+            for idx, row in recent_returns.iterrows():
+                product_name = row['product_name']
+                category = row['category']
+                city = row['city']
+
+                # Check if this item is selected
+                is_active = (st.session_state.get('demand_selected_item', 0) == idx)
+
+                border_style = "1px solid #7C4DFF" if is_active else "1px solid #30363d"
+                bg_style = "rgba(124, 77, 255, 0.1)" if is_active else "#161b22"
+
+                # Create clickable item
+                if st.button(f"{product_name} - {category}", key=f"demand_item_{idx}"):
+                    st.session_state.demand_selected_item = idx
+                    st.rerun()
+
+                st.markdown(f"""
+<div style="background-color: {bg_style}; border: {border_style}; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
 <div style="display: flex; justify-content: space-between; align-items: start;">
-<div style="font-size: 13px; font-weight: bold; color: white;">{item['name']}</div>
-<div style="font-size: 10px; background-color: #21262d; padding: 2px 6px; border-radius: 4px; color: #8b949e;">{item['loc']}</div>
+<div style="font-size: 13px; font-weight: bold; color: white;">{product_name}</div>
+<div style="font-size: 10px; background-color: #21262d; padding: 2px 6px; border-radius: 4px; color: #8b949e;">{city}</div>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-<div style="font-size: 11px; color: #8b949e;">{item['cat']}</div>
-<div style="font-size: 11px; font-weight: bold; color: {item['tag_color']};">{item['tag']}</div>
+<div style="font-size: 11px; color: #8b949e;">{category}</div>
+<div style="font-size: 11px; font-weight: bold; color: #00E676;">Return</div>
 </div>
 </div>
 """, unsafe_allow_html=True)
-            
+
         st.markdown("</div>", unsafe_allow_html=True)
         
         # Inject CSS to make the buttons invisible overlay? Too risky.
@@ -79,10 +82,16 @@ def show():
         
 
     with right_col:
-        # Top Panel: Demand Matching Analysis
-        
-        # Defining HTML separately to avoid indentation issues causing code block rendering
-        html_code = """<div style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+        # Get selected item data
+        selected_item_idx = st.session_state.get('demand_selected_item', 0)
+        selected_item_data = None
+
+        if demand_matching_results and len(demand_matching_results) > selected_item_idx:
+            selected_item_data = demand_matching_results[selected_item_idx]
+
+        if selected_item_data:
+            # Top Panel: Demand Matching Analysis
+            html_code = f"""<div style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <div style="display: flex; gap: 15px; align-items: center;">
 <div style="background-color: #1f1240; padding: 10px; border-radius: 8px; color: #7C4DFF; font-size: 20px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
@@ -90,7 +99,7 @@ def show():
 </div>
 <div>
 <div style="font-size: 16px; font-weight: bold; color: white;">Demand Matching Analysis</div>
-<div style="font-size: 12px; color: #8b949e; margin-top: 4px;">Matching returned <span style="color: white; font-weight: bold;">Beauty</span> item in <span style="color: white; font-weight: bold;">Delhi</span> against history.</div>
+<div style="font-size: 12px; color: #8b949e; margin-top: 4px;">Matching returned <span style="color: white; font-weight: bold;">{selected_item_data['category']}</span> item in <span style="color: white; font-weight: bold;">{selected_item_data['city']}</span> against history.</div>
 </div>
 </div>
 <div>
@@ -101,20 +110,22 @@ def show():
 <div style="display: flex; gap: 20px; margin-top: 25px;">
 <div style="flex: 1; background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; text-align: center;">
 <div style="color: #8b949e; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; letter-spacing: 0.5px;">Local Similar Sales</div>
-<div style="color: white; font-size: 24px; font-weight: bold;">4</div>
+<div style="color: white; font-size: 24px; font-weight: bold;">{selected_item_data['local_similar_sales']}</div>
 <div style="color: #8b949e; font-size: 11px; margin-top: 2px;">Past 90 days</div>
 </div>
 <div style="flex: 1; background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; text-align: center;">
 <div style="color: #8b949e; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; letter-spacing: 0.5px;">Avg Distance</div>
-<div style="color: white; font-size: 24px; font-weight: bold;">3.2 <span style="font-size: 14px; font-weight: normal; color: #8b949e;">km</span></div>
+<div style="color: white; font-size: 24px; font-weight: bold;">{selected_item_data['avg_distance_km']} <span style="font-size: 14px; font-weight: normal; color: #8b949e;">km</span></div>
 </div>
 <div style="flex: 1; background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; text-align: center;">
 <div style="color: #8b949e; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; letter-spacing: 0.5px;">Resale Viability</div>
-<div style="color: #FF5252; font-size: 20px; font-weight: bold; margin-top: 5px;">Low</div>
+<div style="color: {'#00E676' if selected_item_data['resale_viability'] == 'High' else '#fb8c00' if selected_item_data['resale_viability'] == 'Medium' else '#FF5252'}; font-size: 20px; font-weight: bold; margin-top: 5px;">{selected_item_data['resale_viability']}</div>
 </div>
 </div>
 </div>"""
-        st.markdown(html_code, unsafe_allow_html=True)
+            st.markdown(html_code, unsafe_allow_html=True)
+        else:
+            st.error("No demand matching data available for the selected item.")
         
         # Bottom Panel: Nearest Historical Transactions
         st.markdown("""
@@ -152,7 +163,19 @@ def show():
             r5.markdown(f'<div class="dm-row" style="border:none; padding: 12px 0;">{qty}</div>', unsafe_allow_html=True)
             st.markdown("<div style='border-bottom: 1px solid #21262d; opacity: 0.5;'></div>", unsafe_allow_html=True)
             
-        render_dm_row("2025-11-01", "Blinkit", "5.0 km", "Sunny", "2")
-        render_dm_row("2025-12-14", "Swiggy Instamart", "4.9 km", "Windy", "1")
-        render_dm_row("2025-09-25", "Swiggy Instamart", "5.8 km", "Windy", "3")
-        render_dm_row("2025-10-12", "BB Now", "5.6 km", "Windy", "2")
+        # Display real evidence data for selected item
+        if selected_item_data and not selected_item_data['evidence'].empty:
+            for _, row in selected_item_data['evidence'].head(5).iterrows():
+                date = str(row['sale_date'])[:10] if 'sale_date' in row else "N/A"
+                platform = row.get('platform', 'Unknown')
+                distance = f"{row.get('distance_km', 0):.6f} km" if pd.notna(row.get('distance_km')) else "N/A"
+                weather = row.get('weather', 'Unknown')
+                qty = int(row.get('qty', 0))
+
+                render_dm_row(date, platform, distance, weather, str(qty))
+        else:
+            # Fallback static data
+            render_dm_row("2025-11-01", "Blinkit", "5.0 km", "Sunny", "2")
+            render_dm_row("2025-12-14", "Swiggy Instamart", "4.9 km", "Windy", "1")
+            render_dm_row("2025-09-25", "Swiggy Instamart", "5.8 km", "Windy", "3")
+            render_dm_row("2025-10-12", "BB Now", "5.6 km", "Windy", "2")
