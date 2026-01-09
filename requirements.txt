@@ -1,0 +1,34 @@
+# Core Streamlit Application
+streamlit>=1.28.0
+
+# Data Processing & Analysis
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning & AI
+scikit-learn>=1.3.0
+prophet>=1.1.0
+
+# Data Visualization
+plotly>=5.15.0
+folium>=0.14.0
+plotly-express>=0.4.1
+
+# API & Web Requests
+requests>=2.31.0
+
+# Environment & Configuration
+python-dotenv>=1.0.0
+
+# Geospatial Analysis
+haversine>=2.8.0
+
+# Optional: Additional utilities
+openpyxl>=3.1.0  # For Excel file support
+xlrd>=2.0.1      # For older Excel files
+matplotlib>=3.7.0 # Backup plotting (if needed)
+
+# Development & Testing (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0
