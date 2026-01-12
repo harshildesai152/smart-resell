@@ -13,7 +13,6 @@
 ### 📋 Prerequisites
 - **Python 3.8 or higher**
 - **Git**
-- **Internet connection** (for package downloads)
 
 ### 🔄 Step-by-Step Installation
 
