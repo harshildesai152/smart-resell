@@ -72,7 +72,11 @@ sell-best-ai-inventory/
 │   ├── product_lifecycle_processor.py # ML lifecycle classification
 │   ├── price_sensitivity_processor.py # Price elasticity modeling
 │   └── manual_viability_processor.py # Manual analysis support
-│
+|
+│── 📁 data set/
+|   ├──Amazon_Flipkart_Returns_MIXED.xlsx
+|   ├──Instant_Delivery_Sales_MIXED.xlsx
+|
 ├── 📁 separate code/              # 🔍 Original Analysis Scripts
 │   ├── near1.py to near12.py      # Individual ML experiments
 │   └── README files               # Analysis documentation
