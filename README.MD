@@ -101,6 +101,40 @@ sell-best-ai-inventory/
 └── 📄 README.MD                   # 📖 This Documentation
 ```
 
+### 🧠 System Architecture & Methodology
+
+| Component | Method / Algorithm | Purpose | Key Output |
+| :--- | :--- | :--- | :--- |
+| **🌤️ Weather Processor** | `LabelEncoder` | Convert categorical weather data to numerical format | Encoded numerical values |
+| | `LogisticRegression` | Predict sell probability based on weather & sales patterns | Sell probability (0-100%) |
+| | `train_test_split` | Split data to prevent overfitting | Validation datasets |
+| | `Haversine Distance` | Calculate geographic distance (Return vs. Sales) | Distance (km) |
+| | `Pandas Aggregation` | Group data by weather and category | Weather impact tables |
+| **📢 Channel Processor** | `Pandas Aggregation` | Group sales by platform | Revenue & market share stats |
+| | `Math Utils` | Calculate commissions, return rates, delivery speeds | Performance metrics table |
+| | `Trend Analysis` | Track revenue changes over time | Time-series data |
+| **📉 Demand Processor** | `KNN (K-Nearest Neighbors)` | Find similar sales near return locations | Demand matching neighbors |
+| | `Haversine Distance` | Calculate proximity for similarity scoring | Distance measurements |
+| | `Business Logic` | Apply thresholds based on volume/distance | Resale Viability (High/Med/Low) |
+| **🗺️ Geospatial Processor** | `Haversine Distance` | Measure distance between return & sales points | Proximity analysis |
+| | `Weighted Scoring` | Combine distance, demand, and platform factors | Confidence Score (0-100%) |
+| | `Threshold Logic` | Apply rules for final decision | Recommendations (YES/NO/MAYBE) |
+| **🖐️ Manual Viability** | `LabelEncoder` | Pre-processing for ML models | Encoded feature values |
+| | `LogisticRegression` | Predict base sell probability | Base probability score |
+| | `KNeighborsClassifier` | Recommend best platform via similarity | Platform recommendation |
+| | `GradientBoostingRegressor` | Predict optimal market price | Predicted Market Price |
+| **💰 Price Sensitivity** | `LinearRegression` | Model basic price elasticity | Demand prediction (Linear) |
+| | `GradientBoostingRegressor` | Capture non-linear price patterns | Demand prediction (Complex) |
+| | `Discount Simulation` | Test impact of 0-50% discounts | Revenue/Profit impact analysis |
+| | `Break-even Analysis` | Find profitability thresholds | Break-even discount % |
+| **🔄 Lifecycle Processor** | `LinearRegression` | Analyze demand slope over time | Trend (Growing/Stable/Declining) |
+| | `Slope Classification` | Determine lifecycle stage via regression slope | Stage: New / Mature / Declining |
+| **🧩 Segmentation** | `KMeans Clustering` | Group cities by sales/return patterns | City Clusters |
+| | `Risk Calculation` | Assess return risk percentages | Risk Level (Critical to Low) |
+| **🔮 Smart Forecast** | `Prophet` | Time series prediction with seasonality | 30-Day Demand Forecast |
+| | `NearestNeighbors` | Find similar products | Product similarity matching |
+| | `Weather API` | Real-time weather integration | Current condition impact |
+
 ### 🎨 **Architecture Overview:**
 
 ```
