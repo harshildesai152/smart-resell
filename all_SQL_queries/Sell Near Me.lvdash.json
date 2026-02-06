@@ -1,0 +1,2920 @@
+{
+  "datasets": [
+    {
+      "name": "fd2919b1",
+      "displayName": "instant_delivery_sales_mixed_260",
+      "queryLines": [
+        "SELECT * FROM workspace.sell_near_me.instant_delivery_sales_mixed_260"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "6b2c0ed7",
+      "displayName": "amazon_flipkart_returns_mixed_220_1",
+      "queryLines": [
+        "SELECT * FROM workspace.sell_near_me.amazon_flipkart_returns_mixed_220_1"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "a1688c26",
+      "displayName": "Geospatial Demand Analysis",
+      "queryLines": [
+        "WITH nearby_sales AS (\r\n",
+        "  SELECT\r\n",
+        "    r.order_id,\r\n",
+        "    r.product_name,\r\n",
+        "    r.city,\r\n",
+        "\r\n",
+        "    r.lat AS return_lat,\r\n",
+        "    r.lon AS return_lon,\r\n",
+        "\r\n",
+        "    s.platform,\r\n",
+        "    s.quantity,\r\n",
+        "\r\n",
+        "    s.lat AS sale_lat,\r\n",
+        "    s.lon AS sale_lon,\r\n",
+        "\r\n",
+        "    -- Haversine Distance (KM)\r\n",
+        "    6371 * 2 * ASIN(\r\n",
+        "      SQRT(\r\n",
+        "        POWER(SIN(RADIANS(s.lat - r.lat) / 2), 2) +\r\n",
+        "        COS(RADIANS(r.lat)) *\r\n",
+        "        COS(RADIANS(s.lat)) *\r\n",
+        "        POWER(SIN(RADIANS(s.lon - r.lon) / 2), 2)\r\n",
+        "      )\r\n",
+        "    ) AS distance_km\r\n",
+        "\r\n",
+        "  FROM workspace.sell_near_me.amazon_flipkart_returns_mixed_220_1 r\r\n",
+        "  JOIN workspace.sell_near_me.instant_delivery_sales_mixed_260 s\r\n",
+        "    ON r.product_name = s.product_name\r\n",
+        "\r\n",
+        "  WHERE r.lat IS NOT NULL\r\n",
+        "    AND r.lon IS NOT NULL\r\n",
+        "    AND s.lat IS NOT NULL\r\n",
+        "    AND s.lon IS NOT NULL\r\n",
+        ")\r\n",
+        "\r\n",
+        ", summary AS (\r\n",
+        "  SELECT\r\n",
+        "    order_id,\r\n",
+        "    product_name,\r\n",
+        "    city,\r\n",
+        "    return_lat,\r\n",
+        "    return_lon,\r\n",
+        "\r\n",
+        "    MIN(distance_km) AS min_distance_km,\r\n",
+        "    SUM(quantity) AS total_qty,\r\n",
+        "    MAX(platform) AS best_app,\r\n",
+        "    AVG(distance_km) AS avg_distance\r\n",
+        "\r\n",
+        "  FROM nearby_sales\r\n",
+        "\r\n",
+        "  -- Filter within 15 KM radius\r\n",
+        "  WHERE distance_km <= 15\r\n",
+        "\r\n",
+        "  GROUP BY\r\n",
+        "    order_id,\r\n",
+        "    product_name,\r\n",
+        "    city,\r\n",
+        "    return_lat,\r\n",
+        "    return_lon\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "  order_id,\r\n",
+        "  product_name,\r\n",
+        "  city,\r\n",
+        "  return_lat,\r\n",
+        "  return_lon,\r\n",
+        "\r\n",
+        "  min_distance_km,\r\n",
+        "  total_qty,\r\n",
+        "  best_app,\r\n",
+        "  avg_distance,\r\n",
+        "\r\n",
+        "  CASE\r\n",
+        "    WHEN total_qty < 5 THEN 'NO'\r\n",
+        "\r\n",
+        "    WHEN (\r\n",
+        "      0.5 * (15 - avg_distance)/15 +\r\n",
+        "      0.3 * LEAST(total_qty/30, 1) +\r\n",
+        "      0.2 * 1.0\r\n",
+        "    ) * 100 >= 70 THEN 'YES'\r\n",
+        "\r\n",
+        "    WHEN (\r\n",
+        "      0.5 * (15 - avg_distance)/15 +\r\n",
+        "      0.3 * LEAST(total_qty/30, 1) +\r\n",
+        "      0.2 * 1.0\r\n",
+        "    ) * 100 >= 40 THEN 'MAYBE'\r\n",
+        "\r\n",
+        "    ELSE 'NO'\r\n",
+        "  END AS sell_near_me,\r\n",
+        "\r\n",
+        "  ROUND((\r\n",
+        "    0.5 * (15 - avg_distance)/15 +\r\n",
+        "    0.3 * LEAST(total_qty/30, 1) +\r\n",
+        "    0.2 * 1.0\r\n",
+        "  ) * 100) AS sell_confidence\r\n",
+        "\r\n",
+        "FROM summary;\r\n"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "bc5d872b",
+      "displayName": "Manual Viability Check",
+      "queryLines": [
+        "-- MANUAL INPUT\r\n",
+        "\r\n",
+        "WITH input AS (\r\n",
+        "    SELECT\r\n",
+        "        'I phone'     AS product_name,\r\n",
+        "        'Smart Phone' AS category,\r\n",
+        "        25000         AS original_price,\r\n",
+        "        'Winter'      AS weather,\r\n",
+        "        'Ahmedabad'   AS city\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- AGGREGATED SALES\r\n",
+        "\r\n",
+        "sales_features AS (\r\n",
+        "    SELECT\r\n",
+        "        category,\r\n",
+        "        city,\r\n",
+        "        weather,\r\n",
+        "        platform,\r\n",
+        "        AVG(sale_price) AS avg_price,\r\n",
+        "        COUNT(*)        AS total_qty\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE category IS NOT NULL\r\n",
+        "      AND city IS NOT NULL\r\n",
+        "      AND weather IS NOT NULL\r\n",
+        "      AND platform IS NOT NULL\r\n",
+        "      AND sale_price IS NOT NULL\r\n",
+        "    GROUP BY category, city, weather, platform\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- BEST PLATFORM (STRICT MATCH)\r\n",
+        "\r\n",
+        "best_platform_exact AS (\r\n",
+        "    SELECT\r\n",
+        "        category,\r\n",
+        "        city,\r\n",
+        "        weather,\r\n",
+        "        platform,\r\n",
+        "        total_qty,\r\n",
+        "        RANK() OVER (\r\n",
+        "            PARTITION BY category, city, weather\r\n",
+        "            ORDER BY total_qty DESC\r\n",
+        "        ) AS rnk\r\n",
+        "    FROM sales_features\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- BEST PLATFORM PER CITY (FALLBACK)\r\n",
+        "\r\n",
+        "best_platform_city AS (\r\n",
+        "    SELECT\r\n",
+        "        city,\r\n",
+        "        platform,\r\n",
+        "        SUM(total_qty) AS total_sales,\r\n",
+        "        RANK() OVER (\r\n",
+        "            PARTITION BY city\r\n",
+        "            ORDER BY SUM(total_qty) DESC\r\n",
+        "        ) AS rnk\r\n",
+        "    FROM sales_features\r\n",
+        "    GROUP BY city, platform\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- MARKET PRICE\r\n",
+        "\r\n",
+        "market_price AS (\r\n",
+        "    SELECT\r\n",
+        "        category,\r\n",
+        "        city,\r\n",
+        "        weather,\r\n",
+        "        PERCENTILE_APPROX(avg_price, 0.6) AS predicted_market_price\r\n",
+        "    FROM sales_features\r\n",
+        "    GROUP BY category, city, weather\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- SCORING\r\n",
+        "\r\n",
+        "scoring AS (\r\n",
+        "    SELECT\r\n",
+        "        i.product_name,\r\n",
+        "        i.category,\r\n",
+        "        i.city,\r\n",
+        "        i.weather,\r\n",
+        "        i.original_price,\r\n",
+        "\r\n",
+        "        -- Market Price Fallback\r\n",
+        "        COALESCE(\r\n",
+        "            mp.predicted_market_price,\r\n",
+        "            i.original_price * 1.1\r\n",
+        "        ) AS predicted_market_price,\r\n",
+        "\r\n",
+        "        -- Demand Score\r\n",
+        "        CASE\r\n",
+        "            WHEN COALESCE(sf.total_qty,0) >= 30 THEN 0.9\r\n",
+        "            WHEN COALESCE(sf.total_qty,0) >= 15 THEN 0.7\r\n",
+        "            WHEN COALESCE(sf.total_qty,0) >= 5  THEN 0.4\r\n",
+        "            ELSE 0.2\r\n",
+        "        END AS demand_score,\r\n",
+        "\r\n",
+        "        -- Price Score\r\n",
+        "        CASE\r\n",
+        "            WHEN i.original_price <=\r\n",
+        "                 COALESCE(mp.predicted_market_price, i.original_price * 1.1)\r\n",
+        "            THEN 1.0\r\n",
+        "            ELSE 0.6\r\n",
+        "        END AS price_score,\r\n",
+        "\r\n",
+        "        -- Weather Score\r\n",
+        "        CASE\r\n",
+        "            WHEN i.weather = 'Winter'\r\n",
+        "             AND i.category IN ('Heater','Blanket','Jacket','Sweater','Smart Phone')\r\n",
+        "                THEN 1.15\r\n",
+        "            WHEN i.weather = 'Summer'\r\n",
+        "             AND i.category IN ('AC','Cooler','Fan','Refrigerator')\r\n",
+        "                THEN 1.15\r\n",
+        "            ELSE 0.8\r\n",
+        "        END AS weather_score,\r\n",
+        "\r\n",
+        "        -- Platform Selection (NO FAKE DEFAULT)\r\n",
+        "        COALESCE(\r\n",
+        "            bpe.platform,   -- Exact match\r\n",
+        "            bpc.platform    -- City best\r\n",
+        "        ) AS recommended_app\r\n",
+        "\r\n",
+        "\r\n",
+        "    FROM input i\r\n",
+        "\r\n",
+        "    LEFT JOIN sales_features sf\r\n",
+        "        ON i.category = sf.category\r\n",
+        "       AND i.city     = sf.city\r\n",
+        "       AND i.weather  = sf.weather\r\n",
+        "\r\n",
+        "    LEFT JOIN market_price mp\r\n",
+        "        ON i.category = mp.category\r\n",
+        "       AND i.city     = mp.city\r\n",
+        "       AND i.weather  = mp.weather\r\n",
+        "\r\n",
+        "    -- Exact platform\r\n",
+        "    LEFT JOIN best_platform_exact bpe\r\n",
+        "        ON i.category = bpe.category\r\n",
+        "       AND i.city     = bpe.city\r\n",
+        "       AND i.weather  = bpe.weather\r\n",
+        "       AND bpe.rnk = 1\r\n",
+        "\r\n",
+        "    -- City fallback\r\n",
+        "    LEFT JOIN best_platform_city bpc\r\n",
+        "        ON i.city = bpc.city\r\n",
+        "       AND bpc.rnk = 1\r\n",
+        ")\r\n",
+        "\r\n",
+        "-- FINAL RESULT\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    product_name,\r\n",
+        "    category,\r\n",
+        "    city,\r\n",
+        "    weather,\r\n",
+        "\r\n",
+        "    recommended_app,\r\n",
+        "\r\n",
+        "    ROUND(predicted_market_price,2) AS predicted_market_price,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        LEAST(\r\n",
+        "            GREATEST(\r\n",
+        "                (0.5*demand_score +\r\n",
+        "                 0.3*price_score +\r\n",
+        "                 0.2*weather_score),\r\n",
+        "                0.05\r\n",
+        "            ),\r\n",
+        "            0.95\r\n",
+        "        )*100,\r\n",
+        "        2\r\n",
+        "    ) AS sell_probability_percent,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        predicted_market_price - original_price - 60,\r\n",
+        "        2\r\n",
+        "    ) AS estimated_profit,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN predicted_market_price - original_price - 60 > 0\r\n",
+        "        THEN 'YES'\r\n",
+        "        ELSE 'NO'\r\n",
+        "    END AS price_acceptable\r\n",
+        "\r\n",
+        "FROM scoring;\r\n"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "97978c5e",
+      "displayName": "TREND & STOCK RULE",
+      "queryLines": [
+        "WITH category_sales AS (\r\n",
+        "    SELECT\r\n",
+        "        category,\r\n",
+        "        SUM(sale_price) AS sales_value\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE category IS NOT NULL\r\n",
+        "      AND sale_price IS NOT NULL\r\n",
+        "    GROUP BY category\r\n",
+        "),\r\n",
+        "\r\n",
+        "overall_avg AS (\r\n",
+        "    SELECT\r\n",
+        "        AVG(sales_value) AS avg_sales\r\n",
+        "    FROM category_sales\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    cs.category,\r\n",
+        "    ROUND(cs.sales_value, 0) AS sales_value,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        (cs.sales_value - oa.avg_sales) * 100.0 / oa.avg_sales,\r\n",
+        "        2\r\n",
+        "    ) AS trend_vs_avg,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN (cs.sales_value - oa.avg_sales) * 100.0 / oa.avg_sales >= 10\r\n",
+        "            THEN 'High Priority'\r\n",
+        "        WHEN (cs.sales_value - oa.avg_sales) * 100.0 / oa.avg_sales >= 0\r\n",
+        "            THEN 'Medium Priority'\r\n",
+        "        ELSE 'Low Priority'\r\n",
+        "    END AS recommended_stock\r\n",
+        "\r\n",
+        "FROM category_sales cs\r\n",
+        "CROSS JOIN overall_avg oa\r\n",
+        "ORDER BY sales_value DESC;\r\n"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "f0bf4aac",
+      "displayName": "WEATHER IMPACT STATISTICS",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- PAGE 2: WEATHER IMPACT STATISTICS\r\n",
+        "-- =====================================================\r\n",
+        "WITH base AS (\r\n",
+        "    SELECT\r\n",
+        "        weather,\r\n",
+        "        category,\r\n",
+        "        sale_price\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE weather IS NOT NULL\r\n",
+        "      AND category IS NOT NULL\r\n",
+        "      AND sale_price IS NOT NULL\r\n",
+        "),\r\n",
+        "\r\n",
+        "total_txn AS (\r\n",
+        "    SELECT\r\n",
+        "        COUNT(*) AS total_transactions\r\n",
+        "    FROM base\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    b.weather,\r\n",
+        "    COUNT(*) AS total_transactions,\r\n",
+        "    ROUND(AVG(b.sale_price), 0) AS avg_order_value,\r\n",
+        "    ROUND(\r\n",
+        "        COUNT(*) * 100.0 / t.total_transactions,\r\n",
+        "        2\r\n",
+        "    ) AS market_share_percent\r\n",
+        "FROM base b\r\n",
+        "CROSS JOIN total_txn t\r\n",
+        "GROUP BY b.weather, t.total_transactions\r\n",
+        "ORDER BY total_transactions DESC;\r\n"
+      ]
+    },
+    {
+      "name": "08582511",
+      "displayName": "Demand Matching",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- PYTHON-EQUIVALENT DEMAND MATCHING (PER RETURN)\r\n",
+        "-- =====================================================\r\n",
+        "\r\n",
+        "WITH recent_returns AS (\r\n",
+        "    SELECT\r\n",
+        "        r.product_name,\r\n",
+        "        INITCAP(r.category) AS category,\r\n",
+        "        r.city,\r\n",
+        "        CAST(r.lat AS DOUBLE) AS r_lat,\r\n",
+        "        CAST(r.lon AS DOUBLE) AS r_lon,\r\n",
+        "        r.return_date,\r\n",
+        "        ROW_NUMBER() OVER (ORDER BY r.return_date DESC) AS return_rank\r\n",
+        "    FROM workspace.sell_near_me.amazon_flipkart_returns_mixed_220_1 r\r\n",
+        "    WHERE r.lat IS NOT NULL\r\n",
+        "      AND r.lon IS NOT NULL\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- only latest 8 (same as Python)\r\n",
+        "latest_returns AS (\r\n",
+        "    SELECT *\r\n",
+        "    FROM recent_returns\r\n",
+        "    WHERE return_rank <= 8\r\n",
+        "),\r\n",
+        "\r\n",
+        "sales_clean AS (\r\n",
+        "    SELECT\r\n",
+        "        INITCAP(category) AS category,\r\n",
+        "        platform,\r\n",
+        "        CAST(lat AS DOUBLE) AS s_lat,\r\n",
+        "        CAST(lon AS DOUBLE) AS s_lon,\r\n",
+        "        sale_date,\r\n",
+        "        INITCAP(weather) AS weather,\r\n",
+        "        1 AS qty\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE lat IS NOT NULL\r\n",
+        "      AND lon IS NOT NULL\r\n",
+        "),\r\n",
+        "\r\n",
+        "distance_calc AS (\r\n",
+        "    SELECT\r\n",
+        "        r.return_rank,\r\n",
+        "        r.product_name,\r\n",
+        "        r.category,\r\n",
+        "        r.city,\r\n",
+        "        s.platform,\r\n",
+        "        s.sale_date,\r\n",
+        "        s.weather,\r\n",
+        "        s.qty,\r\n",
+        "\r\n",
+        "        -- HAVERSINE (KM)\r\n",
+        "        6371 * 2 * ASIN(\r\n",
+        "            SQRT(\r\n",
+        "                POWER(SIN(RADIANS(s.s_lat - r.r_lat) / 2), 2) +\r\n",
+        "                COS(RADIANS(r.r_lat)) *\r\n",
+        "                COS(RADIANS(s.s_lat)) *\r\n",
+        "                POWER(SIN(RADIANS(s.s_lon - r.r_lon) / 2), 2)\r\n",
+        "            )\r\n",
+        "        ) AS distance_km\r\n",
+        "\r\n",
+        "    FROM latest_returns r\r\n",
+        "    JOIN sales_clean s\r\n",
+        "      ON r.category = s.category\r\n",
+        "),\r\n",
+        "\r\n",
+        "ranked_knn AS (\r\n",
+        "    SELECT *,\r\n",
+        "           ROW_NUMBER() OVER (\r\n",
+        "               PARTITION BY return_rank\r\n",
+        "               ORDER BY distance_km\r\n",
+        "           ) AS rn\r\n",
+        "    FROM distance_calc\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    product_name,\r\n",
+        "    category,\r\n",
+        "    city,\r\n",
+        "    sale_date AS DATE,\r\n",
+        "    platform AS app_channel,\r\n",
+        "    ROUND(distance_km, 2) AS distance_km,\r\n",
+        "    weather,\r\n",
+        "    qty\r\n",
+        "FROM ranked_knn\r\n",
+        "WHERE rn <= 5\r\n",
+        "ORDER BY return_rank, distance_km;\r\n"
+      ],
+      "catalog": "workspace",
+      "schema": "sell_near_me"
+    },
+    {
+      "name": "24aca0f3",
+      "displayName": "Monthly Revenue by Platform from Sales Data",
+      "queryLines": [
+        "WITH sales_monthly AS (\r\n",
+        "    SELECT\r\n",
+        "        DATE_FORMAT(s.sale_date, 'MMM') AS month_name,\r\n",
+        "        MONTH(s.sale_date) AS month_num,\r\n",
+        "        s.platform,\r\n",
+        "        LOWER(TRIM(s.product_name)) AS product_name,\r\n",
+        "\r\n",
+        "        COUNT(*) AS total_sales,\r\n",
+        "        SUM(s.sale_price) AS revenue\r\n",
+        "\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260 s\r\n",
+        "\r\n",
+        "    WHERE s.sale_date IS NOT NULL\r\n",
+        "      AND s.sale_price IS NOT NULL\r\n",
+        "      AND s.platform IN ('Blinkit','Swiggy Instamart','Zepto')\r\n",
+        "\r\n",
+        "    GROUP BY\r\n",
+        "        month_name,\r\n",
+        "        month_num,\r\n",
+        "        platform,\r\n",
+        "        LOWER(TRIM(s.product_name))\r\n",
+        "),\r\n",
+        "\r\n",
+        "returns_monthly AS (\r\n",
+        "    SELECT\r\n",
+        "        LOWER(TRIM(r.product_name)) AS product_name,\r\n",
+        "        COUNT(*) AS total_returns\r\n",
+        "\r\n",
+        "    FROM workspace.sell_near_me.amazon_flipkart_returns_mixed_220_1 r\r\n",
+        "\r\n",
+        "    WHERE r.product_name IS NOT NULL\r\n",
+        "\r\n",
+        "    GROUP BY LOWER(TRIM(r.product_name))\r\n",
+        "),\r\n",
+        "\r\n",
+        "final_data AS (\r\n",
+        "    SELECT\r\n",
+        "        s.month_name,\r\n",
+        "        s.month_num,\r\n",
+        "        s.platform,\r\n",
+        "\r\n",
+        "        SUM(s.revenue) AS revenue,\r\n",
+        "        SUM(s.total_sales) AS total_sales,\r\n",
+        "\r\n",
+        "        COALESCE(SUM(r.total_returns),0) AS total_returns\r\n",
+        "\r\n",
+        "    FROM sales_monthly s\r\n",
+        "\r\n",
+        "    LEFT JOIN returns_monthly r\r\n",
+        "      ON s.product_name = r.product_name\r\n",
+        "\r\n",
+        "    GROUP BY\r\n",
+        "        s.month_name,\r\n",
+        "        s.month_num,\r\n",
+        "        s.platform\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    month_name AS month,\r\n",
+        "    platform,\r\n",
+        "\r\n",
+        "    ROUND(revenue,2) AS revenue,\r\n",
+        "    total_sales,\r\n",
+        "    total_returns,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        (total_returns * 100.0) / NULLIF(total_sales,0),\r\n",
+        "        2\r\n",
+        "    ) AS return_rate_percent,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN (total_returns * 100.0) / NULLIF(total_sales,0) <= 10\r\n",
+        "             AND revenue >= (\r\n",
+        "                 SELECT AVG(sale_price)\r\n",
+        "                 FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "             )\r\n",
+        "        THEN 'SELL'\r\n",
+        "\r\n",
+        "        WHEN (total_returns * 100.0) / NULLIF(total_sales,0) <= 20\r\n",
+        "        THEN 'MAYBE'\r\n",
+        "\r\n",
+        "        ELSE 'DO NOT SELL'\r\n",
+        "    END AS sell_decision\r\n",
+        "\r\n",
+        "FROM final_data\r\n",
+        "\r\n",
+        "ORDER BY\r\n",
+        "    month_num,\r\n",
+        "    platform;\r\n"
+      ]
+    },
+    {
+      "name": "54f28aa5",
+      "displayName": "Market Share",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- MARKET SHARE (%) BY PLATFORM\r\n",
+        "-- =====================================================\r\n",
+        "\r\n",
+        "WITH revenue_by_channel AS (\r\n",
+        "    SELECT\r\n",
+        "        platform,\r\n",
+        "        SUM(sale_price) AS revenue\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE sale_price IS NOT NULL\r\n",
+        "    GROUP BY platform\r\n",
+        "),\r\n",
+        "\r\n",
+        "total_revenue AS (\r\n",
+        "    SELECT\r\n",
+        "        SUM(revenue) AS total_revenue\r\n",
+        "    FROM revenue_by_channel\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    r.platform,\r\n",
+        "    ROUND((r.revenue / t.total_revenue) * 100, 2) AS market_share_percentage\r\n",
+        "FROM revenue_by_channel r\r\n",
+        "CROSS JOIN total_revenue t\r\n",
+        "ORDER BY market_share_percentage DESC;\r\n"
+      ]
+    },
+    {
+      "name": "60429626",
+      "displayName": "Sales Performance by Platform and Product Variety",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- PLATFORM PERFORMANCE METRICS (BASED ON AVAILABLE DATA)\r\n",
+        "-- =====================================================\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    platform,\r\n",
+        "\r\n",
+        "    COUNT(transaction_id) AS total_orders,\r\n",
+        "\r\n",
+        "    COUNT(DISTINCT product_name) AS unique_products,\r\n",
+        "\r\n",
+        "    ROUND(AVG(sale_price), 2) AS avg_order_value,\r\n",
+        "\r\n",
+        "    ROUND(SUM(sale_price), 2) AS total_sales\r\n",
+        "\r\n",
+        "FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "WHERE platform IS NOT NULL\r\n",
+        "  AND sale_price IS NOT NULL\r\n",
+        "GROUP BY platform\r\n",
+        "ORDER BY total_sales DESC;\r\n"
+      ]
+    },
+    {
+      "name": "d5731d48",
+      "displayName": "Smart Forecast",
+      "queryLines": [
+        "WITH\r\n",
+        "\r\n",
+        "sales_clean AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        category,\r\n",
+        "        quantity,\r\n",
+        "        weather,\r\n",
+        "        sale_date,\r\n",
+        "\r\n",
+        "        MONTH(sale_date) AS month,\r\n",
+        "\r\n",
+        "        CASE\r\n",
+        "            WHEN MONTH(sale_date) IN (12,1,2) THEN 'Winter'\r\n",
+        "            WHEN MONTH(sale_date) IN (3,4,5) THEN 'Summer'\r\n",
+        "            WHEN MONTH(sale_date) IN (6,7,8) THEN 'Rainy'\r\n",
+        "            ELSE 'Cloudy'\r\n",
+        "        END AS season\r\n",
+        "\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE sale_date IS NOT NULL\r\n",
+        "      AND quantity IS NOT NULL\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- LATEST DATE\r\n",
+        "\r\n",
+        "latest_date AS (\r\n",
+        "\r\n",
+        "    SELECT MAX(sale_date) AS max_date\r\n",
+        "    FROM sales_clean\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- RECENT (LAST 14 DAYS)\r\n",
+        "\r\n",
+        "recent_sales AS (\r\n",
+        "\r\n",
+        "    SELECT *\r\n",
+        "    FROM sales_clean\r\n",
+        "    WHERE sale_date >= (\r\n",
+        "        SELECT max_date - INTERVAL 14 DAYS\r\n",
+        "        FROM latest_date\r\n",
+        "    )\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- BASELINE (PREVIOUS 90 DAYS, EXCLUDE RECENT)\r\n",
+        "\r\n",
+        "baseline_sales AS (\r\n",
+        "\r\n",
+        "    SELECT *\r\n",
+        "    FROM sales_clean\r\n",
+        "    WHERE sale_date < (\r\n",
+        "        SELECT max_date - INTERVAL 14 DAYS\r\n",
+        "        FROM latest_date\r\n",
+        "    )\r\n",
+        "    AND sale_date >= (\r\n",
+        "        SELECT max_date - INTERVAL 104 DAYS\r\n",
+        "        FROM latest_date\r\n",
+        "    )\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- LIVE VELOCITY\r\n",
+        "\r\n",
+        "live_velocity AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        category,\r\n",
+        "        MAX(weather) AS weather,\r\n",
+        "        SUM(quantity) AS current_velocity\r\n",
+        "    FROM recent_sales\r\n",
+        "    GROUP BY product_name, category\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- BASELINE VELOCITY (PER 14 DAYS WINDOW)\r\n",
+        "\r\n",
+        "baseline_velocity AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        category,\r\n",
+        "\r\n",
+        "        -- normalize to 14-day average\r\n",
+        "        AVG(quantity) * 14 AS baseline_velocity\r\n",
+        "\r\n",
+        "    FROM baseline_sales\r\n",
+        "    GROUP BY product_name, category\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- NEXT SEASON\r\n",
+        "\r\n",
+        "next_month_calc AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        (MONTH(MAX(sale_date)) % 12) + 1 AS next_month\r\n",
+        "    FROM sales_clean\r\n",
+        "),\r\n",
+        "\r\n",
+        "next_season AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        CASE\r\n",
+        "            WHEN next_month IN (12,1,2) THEN 'Winter'\r\n",
+        "            WHEN next_month IN (3,4,5) THEN 'Summer'\r\n",
+        "            WHEN next_month IN (6,7,8) THEN 'Rainy'\r\n",
+        "            ELSE 'Cloudy'\r\n",
+        "        END AS next_season\r\n",
+        "    FROM next_month_calc\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- SEASONAL FORECAST\r\n",
+        "\r\n",
+        "seasonal_forecast AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        s.product_name,\r\n",
+        "        s.category,\r\n",
+        "\r\n",
+        "        CASE\r\n",
+        "            WHEN AVG(s.quantity) >= 15 THEN 'Very High'\r\n",
+        "            WHEN AVG(s.quantity) >= 8 THEN 'High'\r\n",
+        "            WHEN AVG(s.quantity) >= 4 THEN 'Moderate'\r\n",
+        "            ELSE 'Low'\r\n",
+        "        END AS forecasted_demand\r\n",
+        "\r\n",
+        "    FROM sales_clean s\r\n",
+        "    CROSS JOIN next_season ns\r\n",
+        "    WHERE s.season = ns.next_season\r\n",
+        "    GROUP BY s.product_name, s.category\r\n",
+        ")\r\n",
+        "\r\n",
+        "-- FINAL OUTPUT\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    l.product_name AS `Product Name`,\r\n",
+        "    l.category     AS `Category`,\r\n",
+        "\r\n",
+        "    -- REAL % CHANGE\r\n",
+        "    CONCAT(\r\n",
+        "        CASE\r\n",
+        "            WHEN (l.current_velocity / b.baseline_velocity - 1) * 100 >= 0\r\n",
+        "                THEN '+'\r\n",
+        "            ELSE ''\r\n",
+        "        END,\r\n",
+        "        ROUND((l.current_velocity / b.baseline_velocity - 1) * 100, 1),\r\n",
+        "        '% vs avg'\r\n",
+        "    ) AS `Current Velocity`,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN l.current_velocity / b.baseline_velocity >= 1.5 THEN 'High'\r\n",
+        "        WHEN l.current_velocity / b.baseline_velocity >= 1.1 THEN 'Medium'\r\n",
+        "        ELSE 'Low'\r\n",
+        "    END AS `Stock Status`,\r\n",
+        "\r\n",
+        "    l.weather AS `Weather`,\r\n",
+        "\r\n",
+        "    f.forecasted_demand AS `Forecasted Demand`\r\n",
+        "\r\n",
+        "FROM live_velocity l\r\n",
+        "JOIN baseline_velocity b\r\n",
+        "  ON l.product_name = b.product_name\r\n",
+        " AND l.category = b.category\r\n",
+        "\r\n",
+        "LEFT JOIN seasonal_forecast f\r\n",
+        "  ON l.product_name = f.product_name\r\n",
+        " AND l.category = f.category\r\n",
+        "\r\n",
+        "WHERE b.baseline_velocity > 0\r\n",
+        "\r\n",
+        "ORDER BY\r\n",
+        "    l.current_velocity DESC;\r\n"
+      ]
+    },
+    {
+      "name": "8cfb1623",
+      "displayName": "High Demand zone",
+      "queryLines": [
+        "WITH\r\n",
+        "-- =====================================\r\n",
+        "-- SALES PER CITY\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "city_sales AS (\r\n",
+        "    SELECT\r\n",
+        "        city,\r\n",
+        "        SUM(quantity) AS total_sales,\r\n",
+        "        AVG(lat) AS sale_lat,\r\n",
+        "        AVG(lon) AS sale_lon\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE city IS NOT NULL\r\n",
+        "      AND lat IS NOT NULL\r\n",
+        "      AND lon IS NOT NULL\r\n",
+        "    GROUP BY city\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- RETURNS PER CITY\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "city_returns AS (\r\n",
+        "    SELECT\r\n",
+        "        city,\r\n",
+        "        COUNT(order_id) AS total_returns,\r\n",
+        "        AVG(lat) AS return_lat,\r\n",
+        "        AVG(lon) AS return_lon\r\n",
+        "    FROM workspace.sell_near_me.amazon_flipkart_returns_mixed_220_1\r\n",
+        "    WHERE city IS NOT NULL\r\n",
+        "      AND lat IS NOT NULL\r\n",
+        "      AND lon IS NOT NULL\r\n",
+        "    GROUP BY city\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- MERGE SALES + RETURNS\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "city_metrics AS (\r\n",
+        "    SELECT\r\n",
+        "        s.city,\r\n",
+        "\r\n",
+        "        s.total_sales,\r\n",
+        "        COALESCE(r.total_returns,0) AS total_returns,\r\n",
+        "\r\n",
+        "        s.sale_lat,\r\n",
+        "        s.sale_lon,\r\n",
+        "\r\n",
+        "        r.return_lat,\r\n",
+        "        r.return_lon,\r\n",
+        "\r\n",
+        "        -- Return Percentage\r\n",
+        "        ROUND(\r\n",
+        "            COALESCE(r.total_returns,0) * 100.0 /\r\n",
+        "            NULLIF(s.total_sales + COALESCE(r.total_returns,0),0),\r\n",
+        "            2\r\n",
+        "        ) AS return_pct\r\n",
+        "\r\n",
+        "    FROM city_sales s\r\n",
+        "    LEFT JOIN city_returns r\r\n",
+        "      ON s.city = r.city\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- DISTANCE CALCULATION (HAVERSINE)\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "city_distance AS (\r\n",
+        "    SELECT\r\n",
+        "        m.*,\r\n",
+        "\r\n",
+        "        -- Distance in KM\r\n",
+        "        6371 * 2 * ASIN(\r\n",
+        "            SQRT(\r\n",
+        "                POWER(SIN(RADIANS(m.sale_lat - m.return_lat) / 2), 2) +\r\n",
+        "                COS(RADIANS(m.return_lat)) *\r\n",
+        "                COS(RADIANS(m.sale_lat)) *\r\n",
+        "                POWER(SIN(RADIANS(m.sale_lon - m.return_lon) / 2), 2)\r\n",
+        "            )\r\n",
+        "        ) AS distance_km\r\n",
+        "\r\n",
+        "    FROM city_metrics m\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- GLOBAL AVERAGES\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "global_avg AS (\r\n",
+        "    SELECT\r\n",
+        "        AVG(total_sales) AS avg_sales,\r\n",
+        "        AVG(return_pct) AS avg_return,\r\n",
+        "        AVG(distance_km) AS avg_distance\r\n",
+        "    FROM city_distance\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- ZONE + SELL LOGIC\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "zone_assign AS (\r\n",
+        "    SELECT\r\n",
+        "        d.city,\r\n",
+        "\r\n",
+        "        d.total_sales,\r\n",
+        "        d.total_returns,\r\n",
+        "        d.return_pct,\r\n",
+        "\r\n",
+        "        d.sale_lat,\r\n",
+        "        d.sale_lon,\r\n",
+        "        d.return_lat,\r\n",
+        "        d.return_lon,\r\n",
+        "\r\n",
+        "        ROUND(d.distance_km,2) AS distance_km,\r\n",
+        "\r\n",
+        "        CASE\r\n",
+        "            -- Best Case\r\n",
+        "            WHEN d.total_sales >= g.avg_sales\r\n",
+        "             AND d.return_pct <= g.avg_return\r\n",
+        "             AND d.distance_km <= 15\r\n",
+        "            THEN '🟢 High Demand / Low Return / Near Zone'\r\n",
+        "\r\n",
+        "            -- High demand but risky\r\n",
+        "            WHEN d.total_sales >= g.avg_sales\r\n",
+        "             AND d.return_pct > g.avg_return\r\n",
+        "            THEN '🔴 High Demand / High Return'\r\n",
+        "\r\n",
+        "            -- Low demand bad area\r\n",
+        "            WHEN d.total_sales < g.avg_sales\r\n",
+        "             AND d.return_pct > g.avg_return\r\n",
+        "            THEN '🟡 Low Demand / High Return'\r\n",
+        "\r\n",
+        "            -- Stable\r\n",
+        "            ELSE '🟣 Stable Zone'\r\n",
+        "        END AS zone_type,\r\n",
+        "\r\n",
+        "\r\n",
+        "        -- SELL DECISION\r\n",
+        "        CASE\r\n",
+        "            WHEN d.distance_km <= 15\r\n",
+        "             AND d.return_pct <= 10\r\n",
+        "             AND d.total_sales >= g.avg_sales\r\n",
+        "            THEN 'SELL'\r\n",
+        "\r\n",
+        "            WHEN d.distance_km <= 20\r\n",
+        "             AND d.return_pct <= 20\r\n",
+        "            THEN 'TEST SELL'\r\n",
+        "\r\n",
+        "            ELSE 'DO NOT SELL'\r\n",
+        "        END AS sell_decision\r\n",
+        "\r\n",
+        "\r\n",
+        "    FROM city_distance d\r\n",
+        "    CROSS JOIN global_avg g\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- RISK ANALYSIS\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "risk_analysis AS (\r\n",
+        "    SELECT\r\n",
+        "        city,\r\n",
+        "        total_sales AS demand,\r\n",
+        "        return_pct,\r\n",
+        "\r\n",
+        "        CASE\r\n",
+        "            WHEN return_pct >= 25 THEN 'High Risk'\r\n",
+        "            WHEN return_pct >= 12 THEN 'Medium Risk'\r\n",
+        "            ELSE 'Low Risk'\r\n",
+        "        END AS risk_level\r\n",
+        "\r\n",
+        "    FROM zone_assign\r\n",
+        ")\r\n",
+        "\r\n",
+        "-- =====================================\r\n",
+        "-- FINAL OUTPUT\r\n",
+        "-- =====================================\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    z.city,\r\n",
+        "\r\n",
+        "    z.total_sales,\r\n",
+        "    z.total_returns,\r\n",
+        "    z.return_pct,\r\n",
+        "\r\n",
+        "    ROUND(z.sale_lat,4) AS sale_lat,\r\n",
+        "    ROUND(z.sale_lon,4) AS sale_lon,\r\n",
+        "\r\n",
+        "    ROUND(z.return_lat,4) AS return_lat,\r\n",
+        "    ROUND(z.return_lon,4) AS return_lon,\r\n",
+        "\r\n",
+        "    z.distance_km,\r\n",
+        "\r\n",
+        "    z.zone_type,\r\n",
+        "    z.sell_decision,\r\n",
+        "\r\n",
+        "    r.risk_level\r\n",
+        "\r\n",
+        "FROM zone_assign z\r\n",
+        "LEFT JOIN risk_analysis r\r\n",
+        "  ON z.city = r.city\r\n",
+        "\r\n",
+        "ORDER BY\r\n",
+        "    z.total_sales DESC,\r\n",
+        "    z.distance_km ASC;\r\n"
+      ]
+    },
+    {
+      "name": "31f077ac",
+      "displayName": "Product Lifecycle Classification",
+      "queryLines": [
+        "\r\n",
+        "-- PRODUCT LIFECYCLE ANALYSIS (SAFE VERSION)\r\n",
+        "\r\n",
+        "\r\n",
+        "WITH\r\n",
+        "sales_clean AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        quantity,\r\n",
+        "        sale_date,\r\n",
+        "        MONTH(sale_date) AS month\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE sale_date IS NOT NULL\r\n",
+        "      AND quantity IS NOT NULL\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- MONTHLY DEMAND\r\n",
+        "\r\n",
+        "monthly_demand AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        month,\r\n",
+        "        SUM(quantity) AS total_quantity\r\n",
+        "    FROM sales_clean\r\n",
+        "    GROUP BY product_name, month\r\n",
+        "),\r\n",
+        "\r\n",
+        "\r\n",
+        "-- TIME INDEX\r\n",
+        "demand_indexed AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "        month,\r\n",
+        "        total_quantity,\r\n",
+        "\r\n",
+        "        ROW_NUMBER() OVER (\r\n",
+        "            PARTITION BY product_name\r\n",
+        "            ORDER BY month\r\n",
+        "        ) AS time_index,\r\n",
+        "\r\n",
+        "        COUNT(*) OVER (\r\n",
+        "            PARTITION BY product_name\r\n",
+        "        ) AS total_points\r\n",
+        "\r\n",
+        "    FROM monthly_demand\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- SAFE TREND CALCULATION --Linear Regression\r\n",
+        "\r\n",
+        "trend_calc AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "\r\n",
+        "        try_divide(\r\n",
+        "            COUNT(*) * SUM(time_index * total_quantity)\r\n",
+        "            - SUM(time_index) * SUM(total_quantity),\r\n",
+        "\r\n",
+        "            COUNT(*) * SUM(time_index * time_index)\r\n",
+        "            - SUM(time_index) * SUM(time_index)\r\n",
+        "        ) AS slope,\r\n",
+        "\r\n",
+        "        MAX(total_points) AS points\r\n",
+        "\r\n",
+        "    FROM demand_indexed\r\n",
+        "    GROUP BY product_name\r\n",
+        "),\r\n",
+        "\r\n",
+        "-- LIFECYCLE CLASSIFICATION\r\n",
+        "\r\n",
+        "lifecycle AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        product_name,\r\n",
+        "\r\n",
+        "        -- Demand Trend\r\n",
+        "        CASE\r\n",
+        "            WHEN points < 3 THEN 'Growing'\r\n",
+        "            WHEN slope IS NULL THEN 'Stable'\r\n",
+        "            WHEN slope > 1 THEN 'Growing'\r\n",
+        "            WHEN slope > -1 THEN 'Stable'\r\n",
+        "            ELSE 'Declining'\r\n",
+        "        END AS demand_trend,\r\n",
+        "\r\n",
+        "        -- Lifecycle Stage\r\n",
+        "        CASE\r\n",
+        "            WHEN points < 3 THEN 'New'\r\n",
+        "            WHEN slope IS NULL THEN 'Mature'\r\n",
+        "            WHEN slope > 1 THEN 'New'\r\n",
+        "            WHEN slope > -1 THEN 'Mature'\r\n",
+        "            ELSE 'Declining'\r\n",
+        "        END AS lifecycle_stage,\r\n",
+        "\r\n",
+        "        -- Action Recommendation\r\n",
+        "        CASE\r\n",
+        "            WHEN points < 3 THEN 'Increase inventory by 25%'\r\n",
+        "            WHEN slope IS NULL THEN 'Maintain current stock levels'\r\n",
+        "            WHEN slope > 1 THEN 'Increase inventory by 25%'\r\n",
+        "            WHEN slope > -1 THEN 'Maintain current stock levels'\r\n",
+        "            ELSE 'Reduce procurement by 40%'\r\n",
+        "        END AS action_recommendation\r\n",
+        "\r\n",
+        "    FROM trend_calc\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    product_name,\r\n",
+        "    demand_trend,\r\n",
+        "    lifecycle_stage,\r\n",
+        "    action_recommendation\r\n",
+        "FROM lifecycle\r\n",
+        "ORDER BY product_name;\r\n"
+      ]
+    },
+    {
+      "name": "01a6a919",
+      "displayName": "PRODUCT DEMAND TRENDS",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- PRODUCT DEMAND TRENDS (MONTHLY LINE DATA)\r\n",
+        "-- =====================================================\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    MONTH(sale_date) AS month,\r\n",
+        "    product_name,\r\n",
+        "    SUM(quantity) AS total_quantity\r\n",
+        "FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "WHERE sale_date IS NOT NULL\r\n",
+        "  AND quantity IS NOT NULL\r\n",
+        "GROUP BY\r\n",
+        "    MONTH(sale_date),\r\n",
+        "    product_name\r\n",
+        "ORDER BY\r\n",
+        "    month,\r\n",
+        "    product_name;\r\n"
+      ]
+    },
+    {
+      "name": "6f360600",
+      "displayName": "Price vs Demand Relationship",
+      "queryLines": [
+        "-- PRICE vs DEMAND RELATIONSHIP\r\n",
+        "\r\n",
+        "WITH base_metrics AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        AVG(sale_price) AS base_price,\r\n",
+        "        AVG(quantity)   AS base_demand\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE sale_price > 0\r\n",
+        "      AND quantity > 0\r\n",
+        "),\r\n",
+        "\r\n",
+        "discount_levels AS (\r\n",
+        "\r\n",
+        "    SELECT explode(array(0,5,10,15,20,25,30,35,40,45,50)) AS discount_pct\r\n",
+        "),\r\n",
+        "\r\n",
+        "simulated AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        d.discount_pct,\r\n",
+        "\r\n",
+        "        b.base_price * (1 - d.discount_pct / 100.0) AS discounted_price,\r\n",
+        "\r\n",
+        "        b.base_demand *\r\n",
+        "        (1 + (d.discount_pct * 0.02)) AS predicted_demand,\r\n",
+        "\r\n",
+        "        b.base_price,\r\n",
+        "        b.base_demand\r\n",
+        "\r\n",
+        "    FROM discount_levels d\r\n",
+        "    CROSS JOIN base_metrics b\r\n",
+        "),\r\n",
+        "\r\n",
+        "final_calc AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        discount_pct,\r\n",
+        "\r\n",
+        "        predicted_demand,\r\n",
+        "\r\n",
+        "        discounted_price * predicted_demand AS revenue,\r\n",
+        "\r\n",
+        "        (discounted_price * predicted_demand) * 0.25 AS profit,\r\n",
+        "\r\n",
+        "        base_price,\r\n",
+        "        base_demand\r\n",
+        "\r\n",
+        "    FROM simulated\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "    discount_pct       AS discount_percent,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        (predicted_demand / base_demand) * 100, 2\r\n",
+        "    ) AS demand_impact_percent,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        (revenue / (base_price * base_demand)) * 100, 2\r\n",
+        "    ) AS revenue_impact_percent,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        (profit / ((base_price * base_demand) * 0.25)) * 100, 2\r\n",
+        "    ) AS profit_impact_percent\r\n",
+        "\r\n",
+        "FROM final_calc\r\n",
+        "ORDER BY discount_percent;\r\n"
+      ]
+    },
+    {
+      "name": "c0393374",
+      "displayName": "Profit Impact Analysis",
+      "queryLines": [
+        "\r\n",
+        "-- PROFIT IMPACT ANALYSIS (15% DISCOUNT)\r\n",
+        "\r\n",
+        "\r\n",
+        "WITH base_metrics AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        AVG(sale_price) AS base_price,\r\n",
+        "        AVG(quantity)   AS base_demand\r\n",
+        "    FROM workspace.sell_near_me.instant_delivery_sales_mixed_260\r\n",
+        "    WHERE sale_price > 0\r\n",
+        "      AND quantity > 0\r\n",
+        "),\r\n",
+        "\r\n",
+        "discount_sim AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        explode(array(0,5,10,15,20,25,30,35,40,45,50)) AS discount_pct\r\n",
+        "),\r\n",
+        "\r\n",
+        "simulated AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        d.discount_pct,\r\n",
+        "\r\n",
+        "        b.base_price * (1 - d.discount_pct / 100.0) AS discounted_price,\r\n",
+        "\r\n",
+        "        b.base_demand *\r\n",
+        "        (1 + (d.discount_pct * 0.02)) AS predicted_demand,\r\n",
+        "\r\n",
+        "        b.base_price,\r\n",
+        "        b.base_demand\r\n",
+        "\r\n",
+        "    FROM discount_sim d\r\n",
+        "    CROSS JOIN base_metrics b\r\n",
+        "),\r\n",
+        "\r\n",
+        "final_calc AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        discount_pct,\r\n",
+        "\r\n",
+        "        discounted_price,\r\n",
+        "        predicted_demand,\r\n",
+        "\r\n",
+        "        discounted_price * predicted_demand AS revenue,\r\n",
+        "\r\n",
+        "        (discounted_price * predicted_demand) * 0.25 AS profit,\r\n",
+        "\r\n",
+        "        base_price,\r\n",
+        "        base_demand\r\n",
+        "\r\n",
+        "    FROM simulated\r\n",
+        "),\r\n",
+        "\r\n",
+        "impact_calc AS (\r\n",
+        "\r\n",
+        "    SELECT\r\n",
+        "        discount_pct,\r\n",
+        "\r\n",
+        "        predicted_demand,\r\n",
+        "        revenue,\r\n",
+        "        profit,\r\n",
+        "\r\n",
+        "        ROUND(\r\n",
+        "            (predicted_demand / base_demand) * 100, 2\r\n",
+        "        ) AS demand_impact,\r\n",
+        "\r\n",
+        "        ROUND(\r\n",
+        "            (profit / ((base_price * base_demand) * 0.25)) * 100, 2\r\n",
+        "        ) AS profit_impact\r\n",
+        "\r\n",
+        "    FROM final_calc\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "\r\n",
+        "    base.base_demand      AS base_demand_units,\r\n",
+        "\r\n",
+        "    ROUND(\r\n",
+        "        base.base_demand * (i.demand_impact / 100)\r\n",
+        "    ) AS expected_demand_units,\r\n",
+        "\r\n",
+        "    ROUND(i.revenue, 0) AS revenue_value,\r\n",
+        "\r\n",
+        "    ROUND(i.profit_impact - 100, 2) AS profit_change_percent,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN MIN(\r\n",
+        "            CASE WHEN profit_impact >= 100 THEN discount_pct END\r\n",
+        "        ) OVER () IS NULL\r\n",
+        "        THEN 'No Break-even'\r\n",
+        "        ELSE CONCAT(\r\n",
+        "            MIN(\r\n",
+        "                CASE WHEN profit_impact >= 100 THEN discount_pct END\r\n",
+        "            ) OVER (),\r\n",
+        "            '%'\r\n",
+        "        )\r\n",
+        "    END AS break_even_discount\r\n",
+        "\r\n",
+        "FROM impact_calc i\r\n",
+        "CROSS JOIN base_metrics base\r\n",
+        "\r\n",
+        "WHERE discount_pct = 15;\r\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "409d0f11",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    },
+    {
+      "name": "63306c08",
+      "displayName": "Dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "average-distance-per-product",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "a1688c26",
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    },
+                    {
+                      "name": "return_lat",
+                      "expression": "`return_lat`"
+                    },
+                    {
+                      "name": "return_lon",
+                      "expression": "`return_lon`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "return_lat"
+                  },
+                  "longitude": {
+                    "fieldName": "return_lon"
+                  }
+                },
+                "color": {
+                  "fieldName": "city",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Geospatial Demand Analysis in map ",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "manual-viability-check",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bc5d872b",
+                  "fields": [
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    },
+                    {
+                      "name": "weather",
+                      "expression": "`weather`"
+                    },
+                    {
+                      "name": "recommended_app",
+                      "expression": "`recommended_app`"
+                    },
+                    {
+                      "name": "predicted_market_price",
+                      "expression": "`predicted_market_price`"
+                    },
+                    {
+                      "name": "sell_probability_percent",
+                      "expression": "`sell_probability_percent`"
+                    },
+                    {
+                      "name": "estimated_profit",
+                      "expression": "`estimated_profit`"
+                    },
+                    {
+                      "name": "price_acceptable",
+                      "expression": "`price_acceptable`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "product_name",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "product_name",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "category",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "city",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100002,
+                    "title": "city",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "weather",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "weather",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "recommended_app",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "recommended_app",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "predicted_market_price",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100005,
+                    "title": "predicted_market_price",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "sell_probability_percent",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100006,
+                    "title": "sell_probability_percent",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "estimated_profit",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100007,
+                    "title": "estimated_profit",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "price_acceptable",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100008,
+                    "title": "price_acceptable",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Manual viability check"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table-of-trend-stock-rule",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "97978c5e",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "sales_value",
+                      "expression": "`sales_value`"
+                    },
+                    {
+                      "name": "trend_vs_avg",
+                      "expression": "`trend_vs_avg`"
+                    },
+                    {
+                      "name": "recommended_stock",
+                      "expression": "`recommended_stock`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category",
+                    "title": "category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "type": "string",
+                    "displayAs": "string"
+                  },
+                  {
+                    "fieldName": "sales_value",
+                    "title": "sales_value",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "type": "integer",
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "trend_vs_avg",
+                    "title": "trend_vs_avg",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "type": "float",
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "recommended_stock",
+                    "title": "recommended_stock",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "type": "string",
+                    "displayAs": "string"
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Table of TREND & STOCK RULE",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table-weather-impact-stats",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f0bf4aac",
+                  "fields": [
+                    {
+                      "name": "sum(market_share_percent)",
+                      "expression": "SUM(`market_share_percent`)"
+                    },
+                    {
+                      "name": "weather",
+                      "expression": "`weather`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(market_share_percent)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "weather",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Market Share by Weather Type",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 15,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-quantity-per-city",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "08582511",
+                  "fields": [
+                    {
+                      "name": "sum(qty)",
+                      "expression": "SUM(`qty`)"
+                    },
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(qty)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "city",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Demand matching",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "monthly-revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "24aca0f3",
+                  "fields": [
+                    {
+                      "name": "platform",
+                      "expression": "`platform`"
+                    },
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(revenue)",
+                      "expression": "SUM(`revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(revenue)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "platform",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Revenue vs Month",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 21,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "market-share-by-platform",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "54f28aa5",
+                  "fields": [
+                    {
+                      "name": "platform",
+                      "expression": "`platform`"
+                    },
+                    {
+                      "name": "sum(market_share_percentage)",
+                      "expression": "SUM(`market_share_percentage`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "platform",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(market_share_percentage)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Market Share by Platform",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 27,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-sales-platform",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "60429626",
+                  "fields": [
+                    {
+                      "name": "platform",
+                      "expression": "`platform`"
+                    },
+                    {
+                      "name": "total_orders",
+                      "expression": "`total_orders`"
+                    },
+                    {
+                      "name": "unique_products",
+                      "expression": "`unique_products`"
+                    },
+                    {
+                      "name": "avg_order_value",
+                      "expression": "`avg_order_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "area",
+              "encodings": {
+                "x": {
+                  "fieldName": "platform",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fields": [
+                    {
+                      "fieldName": "total_orders"
+                    },
+                    {
+                      "fieldName": "unique_products"
+                    },
+                    {
+                      "fieldName": "avg_order_value"
+                    }
+                  ],
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": " Platform Performance Metrics"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 33,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "forecasted-demand-product-name",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d5731d48",
+                  "fields": [
+                    {
+                      "name": "Product Name",
+                      "expression": "`Product Name`"
+                    },
+                    {
+                      "name": "Category",
+                      "expression": "`Category`"
+                    },
+                    {
+                      "name": "Current Velocity",
+                      "expression": "`Current Velocity`"
+                    },
+                    {
+                      "name": "Stock Status",
+                      "expression": "`Stock Status`"
+                    },
+                    {
+                      "name": "Weather",
+                      "expression": "`Weather`"
+                    },
+                    {
+                      "name": "Forecasted Demand",
+                      "expression": "`Forecasted Demand`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Product Name",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "Product Name",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "Category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "Category",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "Current Velocity",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100002,
+                    "title": "Current Velocity",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "Stock Status",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "Stock Status",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "Weather",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "Weather",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "Forecasted Demand",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100005,
+                    "title": "Forecasted Demand",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Smart Forecast",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 27,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "high-demand-zones",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "8cfb1623",
+                  "fields": [
+                    {
+                      "name": "zone_type",
+                      "expression": "`zone_type`"
+                    },
+                    {
+                      "name": "sale_lat",
+                      "expression": "`sale_lat`"
+                    },
+                    {
+                      "name": "sale_lon",
+                      "expression": "`sale_lon`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "title": "High Demand Zones",
+                "showTitle": true
+              },
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "sale_lat"
+                  },
+                  "longitude": {
+                    "fieldName": "sale_lon"
+                  }
+                },
+                "color": {
+                  "fieldName": "zone_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 38,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "product-demand-trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "31f077ac",
+                  "fields": [
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "demand_trend",
+                      "expression": "`demand_trend`"
+                    },
+                    {
+                      "name": "lifecycle_stage",
+                      "expression": "`lifecycle_stage`"
+                    },
+                    {
+                      "name": "action_recommendation",
+                      "expression": "`action_recommendation`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "product_name",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "product_name",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "demand_trend",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "demand_trend",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "lifecycle_stage",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100002,
+                    "title": "lifecycle_stage",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "action_recommendation",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "action_recommendation",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Product Lifecycle Classification"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 44,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-quantity-per-month-each-product",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01a6a919",
+                  "fields": [
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(total_quantity)",
+                      "expression": "SUM(`total_quantity`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "axis": {
+                    "title": "Months"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_quantity)",
+                  "axis": {
+                    "title": "Demand Index"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "product_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "PRODUCT DEMAND TRENDS",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 50,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "setting-value-chart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6f360600",
+                  "fields": [
+                    {
+                      "name": "discount_percent",
+                      "expression": "`discount_percent`"
+                    },
+                    {
+                      "name": "sum(demand_impact_percent)",
+                      "expression": "SUM(`demand_impact_percent`)"
+                    },
+                    {
+                      "name": "sum(revenue_impact_percent)",
+                      "expression": "SUM(`revenue_impact_percent`)"
+                    },
+                    {
+                      "name": "sum(profit_impact_percent)",
+                      "expression": "SUM(`profit_impact_percent`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "discount_percent",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(demand_impact_percent)"
+                    },
+                    {
+                      "fieldName": "sum(revenue_impact_percent)"
+                    },
+                    {
+                      "fieldName": "sum(profit_impact_percent)"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "title": "Price vs Demand Relationship",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 56,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "profit-impact-analysis",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c0393374",
+                  "fields": [
+                    {
+                      "name": "base_demand_units",
+                      "expression": "`base_demand_units`"
+                    },
+                    {
+                      "name": "expected_demand_units",
+                      "expression": "`expected_demand_units`"
+                    },
+                    {
+                      "name": "revenue_value",
+                      "expression": "`revenue_value`"
+                    },
+                    {
+                      "name": "profit_change_percent",
+                      "expression": "`profit_change_percent`"
+                    },
+                    {
+                      "name": "break_even_discount",
+                      "expression": "`break_even_discount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "base_demand_units",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "base_demand_units",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "expected_demand_units",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "expected_demand_units",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "revenue_value",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100002,
+                    "title": "revenue_value",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "profit_change_percent",
+                    "numberFormat": "0.00",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "profit_change_percent",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "break_even_discount",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "break_even_discount",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Profit Impact Analysis",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 62,
+            "width": 6,
+            "height": 3
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
