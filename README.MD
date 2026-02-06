@@ -243,3 +243,332 @@ xlrd>=2.0.1
 ---
 
 **🎉 Ready to transform your inventory management with AI? Start with `streamlit run app.py`!**
+
+---
+
+## 🗃️ Databricks Project - Complete Analytics Dashboard
+
+### 🎯 **Project Overview**
+This Databricks Lakeview Dashboard provides **14 comprehensive analytics queries** that transform raw sales and returns data into actionable business intelligence. Each query is optimized for performance and designed to answer specific business questions.
+
+---
+
+### 📊 **Query-by-Query Analysis**
+
+#### 1. 🗺️ **Geospatial Demand Analysis**
+**Purpose**: Find optimal locations for reselling returned products
+
+**What it does:**
+- ✅ Find nearby sales for each return
+- ✅ Calculate distance in KM between return location and sale location  
+- ✅ Check if sales are within 15 KM
+- ✅ Count how many products are sold nearby
+- ✅ Decide: Can this product be sold nearby or not?
+- ✅ Give a confidence score (0–100%)
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `WITH` | Create a temporary table named |
+| `AS` | Means rename column |
+| `JOIN` | Join (connect) two tables |
+| `GROUP BY` | Combine same orders together |
+
+---
+
+#### 2. 🖐️ **Manual Viability Check**
+**Purpose**: Instant product assessment for manual input
+
+**What it does:**
+1️⃣ Takes your product details (manual input)
+2️⃣ Reads past sales data
+3️⃣ Finds best selling app
+4️⃣ Predicts selling price
+5️⃣ Checks demand
+6️⃣ Adjusts for season
+7️⃣ Calculates profit
+8️⃣ Gives final YES / NO
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `SELECT` | Pick columns |
+| `FROM` | From table |
+| `WHERE` | Condition |
+| `GROUP BY` | Combine |
+| `JOIN` | Connect |
+| `CASE` | If-Else |
+| `WITH` | Step name |
+| `LEFT JOIN` | Preserve all records from left table |
+
+---
+
+#### 3. 📦 **TREND & STOCK RULE**
+**Purpose**: Inventory optimization recommendations
+
+**What it helps you decide:**
+📦 Which product category needs more stock?
+
+**It checks:**
+✔ Total sales per category
+✔ Average sales of all categories  
+✔ Compare each category with average
+✔ Mark: High / Medium / Low Priority
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `CROSS JOIN` | Attach 1-row table to all rows |
+| `() t` | Temporary table |
+
+---
+
+#### 4. ☁️ **WEATHER IMPACT STATISTICS**
+**Purpose**: Seasonal demand analysis
+
+**What it tells you:**
+☁️ In which weather people buy more?
+💰 What is the average order value in each season?
+📊 What % of total market each weather has?
+
+**Business Insights:**
+✔ Winter vs Summer vs Rainy → who sells more
+✔ Where to focus marketing
+✔ When to stock more
+
+---
+
+#### 5. 🔗 **Demand Matching**
+**Purpose**: KNN-based product matching for returns
+
+**What it does:**
+✅ Takes latest return orders
+✅ Takes sales data
+✅ Calculates distance (KM)
+✅ Finds nearest sales (like KNN)
+✅ Returns top 5 closest matches per return
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `WITH` | Create steps |
+| `CAST` | Convert type |
+| `INITCAP` | Capitalize |
+| `ROW_NUMBER` | Give rank |
+| `JOIN` | Connect tables |
+| `PARTITION BY` | Group |
+| `ORDER BY` | Sort |
+| `WHERE rn<=5` | Take top 5 |
+
+---
+
+#### 6. 📈 **Monthly Revenue by Platform**
+**Purpose**: Platform performance with return analysis
+
+**What it analyzes:**
+Monthly sales + returns for each platform (Blinkit, Zepto, Swiggy Instamart) and decides whether a product is good to sell or not.
+
+**It combines:**
+✅ Sales data
+✅ Return data  
+✅ Revenue
+✅ Return rate
+✅ Business decision (SELL / MAYBE / DO NOT SELL)
+
+---
+
+#### 7. 🏆 **Market Share**
+**Purpose**: Platform dominance analysis
+
+**What it finds:**
+📊 How much percentage of total sales each platform has.
+
+**Business Insights:**
+👉 It tells you:
+Which app earns most money 💰
+Which app is second 🥈  
+Which app is third 🥉
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `SUM()` | Add values |
+| `CROSS JOIN` | Attach 1 row to all |
+| `ROUND()` | Fix decimals |
+| `ORDER BY` | Sort |
+
+---
+
+#### 8. 📊 **Sales Performance by Platform**
+**Purpose**: Comprehensive platform metrics
+
+**What it tells you:**
+📊 How well each platform (app) is performing in sales.
+
+**For every platform, it shows:**
+✅ How many orders it got
+✅ How many different products it sold
+✅ Average order value
+✅ Total revenue
+
+**Key SQL Concepts:**
+| Word | Meaning |
+|------|---------|
+| `DISTINCT` | Remove duplicates |
+| `AVG()` | Average |
+| `ROUND()` | Fix decimals |
+| `GROUP BY` | Combine |
+| `ORDER BY` | Sort |
+
+---
+
+#### 9. 🔮 **Smart Forecast**
+**Purpose**: Predictive analytics and inventory planning
+
+**What it does (in simple words):**
+This SQL tells you for each product:
+✅ How fast it is selling right now
+✅ How it sold in the past
+✅ Is demand increasing or decreasing
+✅ Should you stock more or less
+✅ What will be demand next season
+
+---
+
+#### 10. 🎯 **High Demand Zone**
+**Purpose**: Geographic segmentation and risk analysis
+
+**What it finds for every city:**
+✅ How many products are sold
+✅ How many are returned
+✅ Return percentage
+✅ City location (lat/lon)
+✅ Business zone type (good/bad/risky)
+
+---
+
+#### 11. 🔄 **Product Lifecycle Classification**
+**Purpose**: Product maturity analysis
+
+**What it does for each product:**
+✅ Collects monthly sales
+✅ Sees how demand changes over time
+✅ Calculates trend (increasing / decreasing)
+✅ Classifies lifecycle stage
+✅ Suggests business action
+
+---
+
+#### 12. 📈 **PRODUCT DEMAND TRENDS**
+**Purpose**: Monthly demand tracking
+
+**What it tells you:**
+✅ For every product and every month
+✅ How many items were sold
+
+---
+
+#### 13. 💰 **Price vs Demand Relationship**
+**Purpose**: Price elasticity modeling
+
+**What it does:**
+Simulates discounts from 0% to 50%
+And for each discount, it predicts:
+✅ Change in demand
+✅ Change in revenue
+✅ Change in profit
+
+---
+
+#### 14. 📊 **Profit Impact Analysis**
+**Purpose**: Discount optimization and break-even analysis
+
+**What it does:**
+✔ Takes average price and demand
+✔ Simulates discounts from 0%–50%
+✔ Predicts how demand changes
+✔ Calculates revenue & profit
+✔ Focuses on 15% discount
+✔ Finds profit change
+✔ Finds break-even discount
+
+---
+
+### 🎨 **Dashboard Architecture**
+
+```mermaid
+graph TB
+    A[Raw Data] --> B[Sales Table]
+    A --> C[Returns Table]
+    B --> D[14 Analytics Queries]
+    C --> D
+    D --> E[Visualizations]
+    E --> F[Business Insights]
+    F --> G[Actionable Decisions]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f1f8e9
+    style G fill:#e0f2f1
+```
+
+### 🚀 **Implementation Benefits**
+
+#### 📊 **Business Intelligence**
+- **Real-time Insights**: Live data processing and analysis
+- **Multi-dimensional Analysis**: Geographic, temporal, and categorical views
+- **Predictive Analytics**: Forecasting and trend analysis
+- **Risk Assessment**: Comprehensive risk evaluation
+
+#### 🎯 **Decision Support**
+- **Inventory Optimization**: Stock level recommendations
+- **Platform Strategy**: Channel performance insights
+- **Pricing Intelligence**: Elasticity and profit analysis
+- **Geographic Intelligence**: Location-based demand mapping
+
+#### 🔧 **Technical Features**
+- **Scalable Architecture**: Optimized for large datasets
+- **Performance Tuned**: Efficient SQL queries
+- **Interactive Visualizations**: Rich dashboard experience
+- **Data Integration**: Multiple data sources unified
+
+---
+
+### 📋 **Quick Reference Guide**
+
+| Query | Primary Use | Key Output | Business Impact |
+|-------|-------------|-----------|----------------|
+| **Geospatial** | Location matching | Distance-based recommendations | Optimal resale locations |
+| **Manual Viability** | Product assessment | YES/NO decisions | Quick product evaluation |
+| **Trend & Stock** | Inventory planning | Priority levels | Stock optimization |
+| **Weather Impact** | Seasonal analysis | Weather-based insights | Marketing timing |
+| **Demand Matching** | Product matching | KNN results | Demand fulfillment |
+| **Platform Revenue** | Channel analysis | Performance metrics | Platform strategy |
+| **Market Share** | Competitive analysis | Market percentages | Market positioning |
+| **Sales Performance** | Platform metrics | Comprehensive stats | Channel optimization |
+| **Smart Forecast** | Predictive analytics | Future demand | Inventory planning |
+| **High Demand Zone** | Geographic analysis | Zone classifications | Market expansion |
+| **Product Lifecycle** | Trend analysis | Lifecycle stages | Product strategy |
+| **Demand Trends** | Historical data | Monthly patterns | Trend identification |
+| **Price Sensitivity** | Pricing analysis | Elasticity curves | Pricing strategy |
+| **Profit Impact** | Discount analysis | Break-even points | Profit optimization |
+
+---
+
+### 🎉 **Ready to Transform Your Analytics?**
+
+**🚀 Get Started:**
+1. **Upload your data** to Databricks workspace
+2. **Import the dashboard** using `Sell Near Me.lvdash.json`
+3. **Run the queries** to get instant insights
+4. **Visualize results** with interactive charts
+5. **Make data-driven decisions** with confidence
+
+**💡 Pro Tip:** Start with the **Geospatial Demand Analysis** and **Manual Viability Check** for immediate business value!
+
+---
+
+**🎉 Ready to transform your inventory management with AI? Start with `streamlit run app.py`!**
