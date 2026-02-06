@@ -57,12 +57,12 @@ python -c "import streamlit, pandas, sklearn, plotly; print('✅ All dependencie
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 sell-best-ai-inventory/
 │
-├── 📁 analytics_engine/           # 🧠 ML Processing Modules
+├── analytics_engine/           # ML Processing Modules
 │   ├── demand_processor.py        # Demand matching & geospatial analysis
 │   ├── channel_processor.py       # Multi-platform analytics
 │   ├── weather_processor.py       # Weather impact analysis
@@ -72,11 +72,26 @@ sell-best-ai-inventory/
 │   ├── price_sensitivity_processor.py # Price elasticity modeling
 │   └── manual_viability_processor.py # Manual analysis support
 |
-│── 📁 data set/
+├── all_SQL_queries/            # Databricks Dashboard SQL Queries
+│   ├── TREND_&_STOCK_RULE.sql              # Category performance & stock recommendations
+│   ├── WEATHER_IMPACT_STATISTICS.sql         # Weather-based transaction analysis
+│   ├── Demand_Matching.sql                  # KNN-based demand matching with Haversine
+│   ├── Monthly_Revenue_by_Platform_from_Sales_Data.sql # Channel revenue trends
+│   ├── Market_Share.sql                    # Platform market share analysis
+│   ├── Sales_Performance_by_Platform_and_Product_Variety.sql # Platform metrics
+│   ├── Smart_Forecast.sql                 # Predictive analytics with seasonal trends
+│   ├── High_Demand_zone.sql               # Geographic segmentation & risk analysis
+│   ├── Product_Lifecycle_Classification.sql  # Product trend analysis via regression
+│   ├── PRODUCT_DEMAND_TRENDS.sql          # Monthly demand line data
+│   ├── Price_vs_Demand_Relationship.sql    # Price elasticity modeling
+│   ├── Profit_Impact_Analysis.sql         # Discount simulation & break-even
+│   └── Sell Near Me.lvdash.json          # Complete Databricks dashboard config
+|
+├── data set/
 |   ├──Amazon_Flipkart_Returns_MIXED.xlsx
 |   ├──Instant_Delivery_Sales_MIXED.xlsx
 |
-├── 📁 separate code/              # 🔍 Original Analysis Scripts
+├── separate code/              # Original Analysis Scripts
 │   ├── near1.py to near12.py      # Individual ML experiments
 │   └── README files               # Analysis documentation
 │
